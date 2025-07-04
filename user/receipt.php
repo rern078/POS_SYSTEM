@@ -1,0 +1,291 @@
+<?php
+session_start();
+require_once '../config/database.php';
+require_once '../includes/auth.php';
+
+// Check if user is logged in
+if (!isLoggedIn()) {
+      header('Location: ../login.php');
+      exit();
+}
+
+$pdo = getDBConnection();
+
+// Get order details
+$order_id = isset($_GET['order_id']) ? (int)$_GET['order_id'] : 0;
+
+if (!$order_id) {
+      die('Order ID is required');
+}
+
+// Get order information
+$stmt = $pdo->prepare("
+    SELECT * FROM orders WHERE id = ?
+");
+$stmt->execute([$order_id]);
+$order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$order) {
+      die('Order not found');
+}
+
+// Get order items
+$stmt = $pdo->prepare("
+    SELECT oi.*, p.name AS product_name, p.product_code
+    FROM order_items oi
+    JOIN products p ON oi.product_id = p.id
+    WHERE oi.order_id = ?
+");
+$stmt->execute([$order_id]);
+$order_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Receipt - Order #<?php echo $order_id; ?></title>
+
+      <!-- Bootstrap 5 CSS -->
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+      <!-- Font Awesome -->
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+      <style>
+            @media print {
+                  .no-print {
+                        display: none !important;
+                  }
+
+                  body {
+                        margin: 0;
+                        padding: 20px;
+                  }
+
+                  .receipt-container {
+                        max-width: 100% !important;
+                        box-shadow: none !important;
+                  }
+            }
+
+            .receipt-container {
+                  max-width: 400px;
+                  margin: 20px auto;
+                  border: 1px solid #ddd;
+                  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                  background: white;
+            }
+
+            .receipt-header {
+                  text-align: center;
+                  padding: 20px;
+                  border-bottom: 2px solid #000;
+            }
+
+            .receipt-body {
+                  padding: 20px;
+            }
+
+            .receipt-footer {
+                  text-align: center;
+                  padding: 20px;
+                  border-top: 1px solid #ddd;
+                  background: #f8f9fa;
+            }
+
+            .item-row {
+                  display: flex;
+                  justify-content: space-between;
+                  margin-bottom: 8px;
+                  padding-bottom: 8px;
+                  border-bottom: 1px dotted #eee;
+            }
+
+            .item-name {
+                  flex: 2;
+            }
+
+            .item-quantity {
+                  flex: 1;
+                  text-align: center;
+            }
+
+            .item-price {
+                  flex: 1;
+                  text-align: right;
+            }
+
+            .total-row {
+                  font-weight: bold;
+                  font-size: 1.1em;
+                  border-top: 2px solid #000;
+                  padding-top: 10px;
+                  margin-top: 10px;
+            }
+
+            .store-info {
+                  font-size: 0.9em;
+                  color: #666;
+            }
+
+            .order-info {
+                  font-size: 0.8em;
+                  color: #888;
+                  margin-bottom: 15px;
+            }
+      </style>
+</head>
+
+<body>
+      <!-- Print Button -->
+      <div class="no-print text-center mt-3">
+            <button class="btn btn-primary" onclick="window.print()">
+                  <i class="fas fa-print me-2"></i>Print Receipt
+            </button>
+            <a href="pos.php" class="btn btn-secondary ms-2">
+                  <i class="fas fa-arrow-left me-2"></i>Back to POS
+            </a>
+      </div>
+
+      <!-- Receipt -->
+      <div class="receipt-container">
+            <!-- Receipt Header -->
+            <div class="receipt-header">
+                  <h3 class="mb-1">
+                        <i class="fas fa-store text-primary me-2"></i>POS System
+                  </h3>
+                  <p class="mb-1">Modern Point of Sale Solution</p>
+                  <div class="store-info">
+                        <p class="mb-1">123 Business Street</p>
+                        <p class="mb-1">City, State 12345</p>
+                        <p class="mb-1">Phone: (555) 123-4567</p>
+                        <p class="mb-0">Email: info@possystem.com</p>
+                  </div>
+            </div>
+
+            <!-- Receipt Body -->
+            <div class="receipt-body">
+                  <!-- Order Information -->
+                  <div class="order-info">
+                        <div class="row">
+                              <div class="col-6">
+                                    <strong>Order #:</strong> <?php echo $order_id; ?>
+                              </div>
+                              <div class="col-6 text-end">
+                                    <strong>Date:</strong> <?php echo date('M d, Y', strtotime($order['created_at'])); ?>
+                              </div>
+                        </div>
+                        <div class="row">
+                              <div class="col-6">
+                                    <strong>Time:</strong> <?php echo date('H:i A', strtotime($order['created_at'])); ?>
+                              </div>
+                              <div class="col-6 text-end">
+                                    <strong>Cashier:</strong> <?php echo htmlspecialchars($_SESSION['username']); ?>
+                              </div>
+                        </div>
+                        <?php if ($order['customer_name']): ?>
+                              <div class="row">
+                                    <div class="col-12">
+                                          <strong>Customer:</strong> <?php echo htmlspecialchars($order['customer_name']); ?>
+                                    </div>
+                              </div>
+                        <?php endif; ?>
+                        <?php if ($order['customer_email']): ?>
+                              <div class="row">
+                                    <div class="col-12">
+                                          <strong>Email:</strong> <?php echo htmlspecialchars($order['customer_email']); ?>
+                                    </div>
+                              </div>
+                        <?php endif; ?>
+                  </div>
+
+                  <!-- Items Header -->
+                  <div class="item-row" style="font-weight: bold; border-bottom: 2px solid #000;">
+                        <div class="item-name">Item</div>
+                        <div class="item-quantity">Qty</div>
+                        <div class="item-price">Price</div>
+                  </div>
+
+                  <!-- Order Items -->
+                  <?php foreach ($order_items as $item): ?>
+                        <div class="item-row">
+                              <div class="item-name">
+                                    <?php echo htmlspecialchars($item['product_name']); ?>
+                                    <br>
+                                    <small class="text-muted"><?php echo htmlspecialchars($item['product_code']); ?></small>
+                              </div>
+                              <div class="item-quantity">
+                                    <?php echo $item['quantity']; ?>
+                              </div>
+                              <div class="item-price">
+                                    $<?php echo number_format($item['price'], 2); ?>
+                              </div>
+                        </div>
+                  <?php endforeach; ?>
+
+                  <!-- Total -->
+                  <div class="item-row total-row">
+                        <div class="item-name">TOTAL</div>
+                        <div class="item-quantity"></div>
+                        <div class="item-price">$<?php echo number_format($order['total_amount'], 2); ?></div>
+                  </div>
+
+                  <!-- Payment Information -->
+                  <div class="mt-3">
+                        <div class="row">
+                              <div class="col-6">
+                                    <strong>Payment Method:</strong>
+                              </div>
+                              <div class="col-6 text-end">
+                                    <?php echo ucfirst($order['payment_method']); ?>
+                              </div>
+                        </div>
+                        <div class="row">
+                              <div class="col-6">
+                                    <strong>Status:</strong>
+                              </div>
+                              <div class="col-6 text-end">
+                                    <span class="badge bg-<?php echo $order['status'] === 'completed' ? 'success' : 'warning'; ?>">
+                                          <?php echo ucfirst($order['status']); ?>
+                                    </span>
+                              </div>
+                        </div>
+                  </div>
+            </div>
+
+            <!-- Receipt Footer -->
+            <div class="receipt-footer">
+                  <p class="mb-2"><strong>Thank you for your purchase!</strong></p>
+                  <p class="mb-2">Please keep this receipt for your records</p>
+                  <p class="mb-2">For returns, please bring this receipt within 30 days</p>
+                  <p class="mb-0">
+                        <small>
+                              Receipt generated on <?php echo date('M d, Y H:i:s'); ?><br>
+                              Transaction ID: <?php echo strtoupper(substr(md5($order_id . time()), 0, 8)); ?>
+                        </small>
+                  </p>
+            </div>
+      </div>
+
+      <!-- Bootstrap 5 JS -->
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+      <script>
+            // Auto-print when page loads (optional)
+            // window.onload = function() {
+            //     window.print();
+            // };
+
+            // Add keyboard shortcut for printing
+            document.addEventListener('keydown', function(e) {
+                  if (e.ctrlKey && e.key === 'p') {
+                        e.preventDefault();
+                        window.print();
+                  }
+            });
+      </script>
+</body>
+
+</html>
