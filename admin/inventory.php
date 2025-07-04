@@ -12,6 +12,18 @@ if (!isLoggedIn() || !isAdmin()) {
 // Get inventory data
 $pdo = getDBConnection();
 
+// Pagination settings
+$items_per_page = 10; // Number of items per page
+$current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$current_page = max(1, $current_page); // Ensure page is at least 1
+$offset = ($current_page - 1) * $items_per_page;
+
+// Get total number of products for pagination
+$stmt = $pdo->prepare("SELECT COUNT(*) as total FROM products");
+$stmt->execute();
+$total_products = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+$total_pages = ceil($total_products / $items_per_page);
+
 // Get inventory statistics
 $stmt = $pdo->prepare("SELECT 
     COUNT(*) as total_products,
@@ -42,11 +54,14 @@ $stmt = $pdo->prepare("
 $stmt->execute();
 $out_of_stock_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Get all products for inventory table
+// Get paginated products for inventory table
 $stmt = $pdo->prepare("
     SELECT * FROM products 
     ORDER BY stock_quantity ASC, name ASC
+    LIMIT :limit OFFSET :offset
 ");
+$stmt->bindValue(':limit', $items_per_page, PDO::PARAM_INT);
+$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 $stmt->execute();
 $all_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -59,6 +74,59 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute();
 $stock_by_category = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Function to generate pagination links
+function generatePaginationLinks($current_page, $total_pages, $base_url = 'inventory.php')
+{
+      $links = '';
+
+      // Previous button
+      if ($current_page > 1) {
+            $prev_page = $current_page - 1;
+            $links .= '<li class="page-item"><a class="page-link" href="' . $base_url . '?page=' . $prev_page . '"><i class="fas fa-chevron-left"></i></a></li>';
+      } else {
+            $links .= '<li class="page-item disabled"><span class="page-link"><i class="fas fa-chevron-left"></i></span></li>';
+      }
+
+      // Page numbers
+      $start_page = max(1, $current_page - 2);
+      $end_page = min($total_pages, $current_page + 2);
+
+      // Show first page if not in range
+      if ($start_page > 1) {
+            $links .= '<li class="page-item"><a class="page-link" href="' . $base_url . '?page=1">1</a></li>';
+            if ($start_page > 2) {
+                  $links .= '<li class="page-item disabled"><span class="page-link">...</span></li>';
+            }
+      }
+
+      // Show page numbers in range
+      for ($i = $start_page; $i <= $end_page; $i++) {
+            if ($i == $current_page) {
+                  $links .= '<li class="page-item active"><span class="page-link">' . $i . '</span></li>';
+            } else {
+                  $links .= '<li class="page-item"><a class="page-link" href="' . $base_url . '?page=' . $i . '">' . $i . '</a></li>';
+            }
+      }
+
+      // Show last page if not in range
+      if ($end_page < $total_pages) {
+            if ($end_page < $total_pages - 1) {
+                  $links .= '<li class="page-item disabled"><span class="page-link">...</span></li>';
+            }
+            $links .= '<li class="page-item"><a class="page-link" href="' . $base_url . '?page=' . $total_pages . '">' . $total_pages . '</a></li>';
+      }
+
+      // Next button
+      if ($current_page < $total_pages) {
+            $next_page = $current_page + 1;
+            $links .= '<li class="page-item"><a class="page-link" href="' . $base_url . '?page=' . $next_page . '"><i class="fas fa-chevron-right"></i></a></li>';
+      } else {
+            $links .= '<li class="page-item disabled"><span class="page-link"><i class="fas fa-chevron-right"></i></span></li>';
+      }
+
+      return $links;
+}
 ?>
 
 <!DOCTYPE html>
@@ -405,6 +473,20 @@ $stock_by_category = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                 </tbody>
                                           </table>
                                     </div>
+
+                                    <!-- Pagination Controls -->
+                                    <?php if ($total_pages > 1): ?>
+                                          <div class="d-flex justify-content-between align-items-center mt-3">
+                                                <div class="text-muted">
+                                                      Showing <?php echo $offset + 1; ?> to <?php echo min($offset + $items_per_page, $total_products); ?> of <?php echo $total_products; ?> products
+                                                </div>
+                                                <nav aria-label="Inventory pagination">
+                                                      <ul class="pagination pagination-sm mb-0">
+                                                            <?php echo generatePaginationLinks($current_page, $total_pages); ?>
+                                                      </ul>
+                                                </nav>
+                                          </div>
+                                    <?php endif; ?>
                               </div>
                         </div>
                   </div>
