@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Jul 04, 2025 at 04:13 AM
+-- Generation Time: Jul 04, 2025 at 08:19 AM
 -- Server version: 5.7.36
 -- PHP Version: 8.0.13
 
@@ -38,7 +38,16 @@ CREATE TABLE IF NOT EXISTS `orders` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=4 DEFAULT CHARSET=latin1;
+
+--
+-- Dumping data for table `orders`
+--
+
+INSERT INTO `orders` (`id`, `customer_name`, `customer_email`, `total_amount`, `status`, `payment_method`, `created_at`, `updated_at`) VALUES
+(1, 'bb', 'chamrern@gmail.com', '4.00', 'completed', 'cash', '2025-07-04 08:03:38', '2025-07-04 08:03:38'),
+(2, 'aa', 'tiengchamrern2@gmail.com', '8.00', 'completed', 'card', '2025-07-04 08:04:10', '2025-07-04 08:04:10'),
+(3, 'chamrern', 'chamrer@gmail.com', '20.50', 'completed', 'cash', '2025-07-04 08:14:36', '2025-07-04 08:14:36');
 
 -- --------------------------------------------------------
 
@@ -56,7 +65,19 @@ CREATE TABLE IF NOT EXISTS `order_items` (
   PRIMARY KEY (`id`),
   KEY `order_id` (`order_id`),
   KEY `product_id` (`product_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=7 DEFAULT CHARSET=latin1;
+
+--
+-- Dumping data for table `order_items`
+--
+
+INSERT INTO `order_items` (`id`, `order_id`, `product_id`, `quantity`, `price`) VALUES
+(1, 1, 1, 2, '2.00'),
+(2, 2, 16, 2, '4.00'),
+(3, 3, 11, 2, '3.00'),
+(4, 3, 2, 2, '2.50'),
+(5, 3, 4, 2, '3.00'),
+(6, 3, 3, 2, '1.75');
 
 -- --------------------------------------------------------
 
@@ -86,23 +107,23 @@ CREATE TABLE IF NOT EXISTS `products` (
 --
 
 INSERT INTO `products` (`id`, `product_code`, `name`, `description`, `price`, `discount_price`, `stock_quantity`, `category`, `image_path`, `created_at`, `updated_at`) VALUES
-(1, 'PROD001', 'Coca Cola', 'Refreshing carbonated soft drink - 330ml can', '2.50', '2.00', 100, 'Beverages', 'images/coke.jpg', '2025-07-04 03:39:03', '2025-07-04 03:47:30'),
-(2, 'PROD002', 'Pepsi', 'Classic cola drink - 330ml can', '2.50', NULL, 85, 'Beverages', 'images/pepsi.jpg', '2025-07-04 03:39:03', '2025-07-04 03:47:30'),
-(3, 'PROD003', 'Sprite', 'Lemon-lime flavored soft drink - 330ml can', '2.00', '1.75', 60, 'Beverages', 'images/sprite.jpg', '2025-07-04 03:39:03', '2025-07-04 03:47:30'),
-(4, 'PROD004', 'Red Bull', 'Energy drink - 250ml can', '3.50', '3.00', 45, 'Beverages', 'images/redbull.jpg', '2025-07-04 03:39:03', '2025-07-04 03:47:30'),
+(1, 'PROD001', 'Coca Cola', 'Refreshing carbonated soft drink - 330ml can', '2.50', '2.00', 90, 'Beverages', 'images/coke.jpg', '2025-07-04 03:39:03', '2025-07-04 08:03:38'),
+(2, 'PROD002', 'Pepsi', 'Classic cola drink - 330ml can', '2.50', NULL, 83, 'Beverages', 'images/pepsi.jpg', '2025-07-04 03:39:03', '2025-07-04 08:14:36'),
+(3, 'PROD003', 'Sprite', 'Lemon-lime flavored soft drink - 330ml can', '2.00', '1.75', 58, 'Beverages', 'images/sprite.jpg', '2025-07-04 03:39:03', '2025-07-04 08:14:36'),
+(4, 'PROD004', 'Red Bull', 'Energy drink - 250ml can', '3.50', '3.00', 43, 'Beverages', 'images/redbull.jpg', '2025-07-04 03:39:03', '2025-07-04 08:14:36'),
 (5, 'PROD005', 'Mineral Water', 'Pure drinking water - 500ml bottle', '1.00', NULL, 200, 'Beverages', 'images/water.jpg', '2025-07-04 03:39:03', '2025-07-04 03:47:30'),
-(6, 'PROD006', 'Lays Classic', 'Original potato chips - 150g bag', '3.00', '2.50', 75, 'Snacks', 'images/lays.jpg', '2025-07-04 03:39:03', '2025-07-04 03:47:30'),
-(7, 'PROD007', 'Doritos Nacho', 'Cheese flavored tortilla chips - 180g bag', '4.50', '3.99', 50, 'Snacks', 'images/doritos.jpg', '2025-07-04 03:39:03', '2025-07-04 03:47:30'),
+(6, 'PROD006', 'Lays Classic', 'Original potato chips - 150g bag', '3.00', '2.50', 73, 'Snacks', 'images/lays.jpg', '2025-07-04 03:39:03', '2025-07-04 07:52:27'),
+(7, 'PROD007', 'Doritos Nacho', 'Cheese flavored tortilla chips - 180g bag', '4.50', '3.99', 49, 'Snacks', 'images/doritos.jpg', '2025-07-04 03:39:03', '2025-07-04 07:56:16'),
 (8, 'PROD008', 'Pringles Original', 'Stackable potato chips - 110g can', '5.00', '4.50', 40, 'Snacks', 'images/pringles.jpg', '2025-07-04 03:39:03', '2025-07-04 03:47:30'),
 (9, 'PROD009', 'Oreo', 'Chocolate sandwich cookies', '3.50', '3.00', 1, 'Snacks', 'images/snickers.jpg', '2025-07-04 03:39:03', '2025-07-04 03:47:44'),
-(10, 'PROD010', 'KitKat', 'Chocolate wafer bar - 4 finger pack', '2.25', '2.00', 65, 'Snacks', 'images/kitkat.jpg', '2025-07-04 03:39:03', '2025-07-04 03:47:30'),
-(11, 'PROD011', 'Oreo Cookies', 'Chocolate sandwich cookies - 137g pack', '3.50', '3.00', 55, 'Snacks', 'images/oreo.jpg', '2025-07-04 03:47:30', '2025-07-04 03:47:30'),
+(10, 'PROD010', 'KitKat', 'Chocolate wafer bar - 4 finger pack', '2.25', '2.00', 63, 'Snacks', 'images/kitkat.jpg', '2025-07-04 03:39:03', '2025-07-04 07:12:46'),
+(11, 'PROD011', 'Oreo Cookies', 'Chocolate sandwich cookies - 137g pack', '3.50', '3.00', 53, 'Snacks', 'images/oreo.jpg', '2025-07-04 03:47:30', '2025-07-04 08:14:36'),
 (12, 'PROD012', 'Twix', 'Chocolate bar with caramel and cookie - 50g', '2.50', '2.25', 70, 'Snacks', 'images/twix.jpg', '2025-07-04 03:47:30', '2025-07-04 03:47:30'),
-(13, 'PROD013', 'M&M\'s Peanut', 'Chocolate candies with peanuts - 100g bag', '3.00', '2.75', 45, 'Snacks', 'images/mms.jpg', '2025-07-04 03:47:30', '2025-07-04 03:47:30'),
+(13, 'PROD013', 'M&M\'s Peanut', 'Chocolate candies with peanuts - 100g bag', '3.00', '2.75', 44, 'Snacks', 'images/mms.jpg', '2025-07-04 03:47:30', '2025-07-04 07:52:27'),
 (14, 'PROD014', 'White Bread', 'Fresh white bread loaf - 500g', '2.50', NULL, 30, 'Groceries', 'images/bread.jpg', '2025-07-04 03:47:30', '2025-07-04 03:47:30'),
 (15, 'PROD015', 'Milk', 'Fresh whole milk - 1 liter', '3.00', '2.75', 25, 'Groceries', 'images/milk.jpg', '2025-07-04 03:47:30', '2025-07-04 03:47:30'),
-(16, 'PROD016', 'Eggs', 'Fresh farm eggs - 12 pieces', '4.50', '4.00', 40, 'Groceries', 'images/eggs.jpg', '2025-07-04 03:47:30', '2025-07-04 03:47:30'),
-(17, 'PROD017', 'Butter', 'Salted butter - 250g block', '3.75', '3.50', 35, 'Groceries', 'images/butter.jpg', '2025-07-04 03:47:30', '2025-07-04 03:47:30'),
+(16, 'PROD016', 'Eggs', 'Fresh farm eggs - 12 pieces', '4.50', '4.00', 38, 'Groceries', 'images/eggs.jpg', '2025-07-04 03:47:30', '2025-07-04 08:04:10'),
+(17, 'PROD017', 'Butter', 'Salted butter - 250g block', '3.75', '3.50', 34, 'Groceries', NULL, '2025-07-04 03:47:30', '2025-07-04 07:49:46'),
 (18, 'PROD018', 'Toothpaste', 'Fresh mint toothpaste - 100ml tube', '4.00', '3.50', 60, 'Personal Care', 'images/toothpaste.jpg', '2025-07-04 03:47:30', '2025-07-04 03:47:30'),
 (19, 'PROD019', 'Shampoo', 'Moisturizing shampoo - 400ml bottle', '8.50', '7.99', 30, 'Personal Care', 'images/shampoo.jpg', '2025-07-04 03:47:30', '2025-07-04 03:47:30'),
 (20, 'PROD020', 'Soap Bar', 'Antibacterial soap bar - 100g', '2.00', '1.75', 80, 'Personal Care', 'images/soap.jpg', '2025-07-04 03:47:30', '2025-07-04 03:47:30'),
@@ -127,7 +148,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
   UNIQUE KEY `email` (`email`)
-) ENGINE=MyISAM AUTO_INCREMENT=5 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=6 DEFAULT CHARSET=latin1;
 
 --
 -- Dumping data for table `users`
@@ -137,7 +158,8 @@ INSERT INTO `users` (`id`, `username`, `email`, `password`, `role`, `created_at`
 (1, 'admin', 'admin@pos.com', '$2y$10$8gz7vcKRBkGSkHkTfEYy..lspHoGvttz4ioaRko2jzDyFDql0Yr.C', 'admin', '2025-07-04 02:37:13', '2025-07-04 02:37:13'),
 (2, 'chamrern', 'chamrern@gmail.com', '$2y$10$.iFJi/8wG305GsIfVeK.pe90nMZK9WZl9OKzTYp9EBEo.BECtB6jm', 'admin', '2025-07-04 02:48:03', '2025-07-04 02:48:03'),
 (3, 'users', 'user@gmail.com', '$2y$10$ErUu0aA6Zx18A7I8Wl8lrOl9g.vwGW/JcfMYGRZ/9FqDxaTGIfGFO', 'cashier', '2025-07-04 02:48:36', '2025-07-04 02:48:36'),
-(4, 'manager', 'manager@gmail.com', '$2y$10$b3FaHdMMEAnnRP9EGQ4LkeqrnVVnyecveJVnl6dOibAsX5St0J.KS', 'manager', '2025-07-04 02:49:03', '2025-07-04 02:49:03');
+(4, 'manager', 'manager@gmail.com', '$2y$10$b3FaHdMMEAnnRP9EGQ4LkeqrnVVnyecveJVnl6dOibAsX5St0J.KS', 'manager', '2025-07-04 02:49:03', '2025-07-04 02:49:03'),
+(5, 'users1', 'user1@gmail.com', '$2y$10$LVeflnxmnq1QPf9EIi8YAO7UhFhmAnuL28m0AzrRUdctzNZjPD3A2', 'cashier', '2025-07-04 04:48:04', '2025-07-04 04:48:04');
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

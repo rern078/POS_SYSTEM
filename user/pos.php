@@ -130,6 +130,110 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         echo json_encode(['success' => false, 'message' => 'Error processing payment: ' . $e->getMessage()]);
                   }
                   exit;
+
+            case 'fetch_products':
+                  $search = isset($_POST['search']) ? trim($_POST['search']) : '';
+                  $category = isset($_POST['category']) ? $_POST['category'] : '';
+
+                  $where_conditions = ["stock_quantity > 0"];
+                  $params = [];
+
+                  if (!empty($search)) {
+                        $where_conditions[] = "(name LIKE ? OR product_code LIKE ?)";
+                        $params[] = "%$search%";
+                        $params[] = "%$search%";
+                  }
+
+                  if (!empty($category)) {
+                        $where_conditions[] = "category = ?";
+                        $params[] = $category;
+                  }
+
+                  $where_clause = implode(' AND ', $where_conditions);
+
+                  $stmt = $pdo->prepare("SELECT * FROM products WHERE $where_clause ORDER BY name ASC");
+                  $stmt->execute($params);
+                  $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                  ob_start();
+                  foreach ($products as $product) {
+                        $img_path = !empty($product['image_path']) ? '../' . htmlspecialchars($product['image_path']) : '../images/placeholder.jpg';
+?>
+                        <div class="col-lg-3 col-md-4 col-sm-6">
+                              <div class="card product-card" onclick="addToCart(<?php echo $product['id']; ?>)">
+                                    <img src="<?php echo $img_path; ?>"
+                                          class="card-img-top product-image"
+                                          alt="<?php echo htmlspecialchars($product['name']); ?>"
+                                          onerror="this.src='../images/placeholder.jpg'">
+                                    <div class="card-body">
+                                          <h6 class="card-title"><?php echo htmlspecialchars($product['name']); ?></h6>
+                                          <p class="card-text small text-muted"><?php echo htmlspecialchars($product['product_code']); ?></p>
+                                          <div class="d-flex justify-content-between align-items-center">
+                                                <span class="fw-bold text-primary">
+                                                      $<?php echo number_format($product['discount_price'] ?: $product['price'], 2); ?>
+                                                </span>
+                                                <span class="badge bg-<?php echo $product['stock_quantity'] < 10 ? 'warning' : 'success'; ?>">
+                                                      Stock: <?php echo $product['stock_quantity']; ?>
+                                                </span>
+                                          </div>
+                                          <?php if ($product['discount_price'] && $product['discount_price'] < $product['price']): ?>
+                                                <small class="text-muted text-decoration-line-through">
+                                                      $<?php echo number_format($product['price'], 2); ?>
+                                                </small>
+                                          <?php endif; ?>
+                                    </div>
+                              </div>
+                        </div>
+                        <?php
+                  }
+                  $html = ob_get_clean();
+                  echo json_encode(['success' => true, 'html' => $html]);
+                  exit;
+
+            case 'fetch_cart':
+                  ob_start();
+                  if (empty($_SESSION['cart'])) {
+                        echo '<div class="text-center mt-4 justify-content-center align-items-center d-flex flex-column w-100">
+                                <img src="../images/placeholder-cart.png" alt="Empty Cart" style="width:120px;opacity:0.5;" class="mb-2">
+                                <div class="text-muted">Cart is empty</div>
+                              </div>';
+                  } else {
+                        foreach ($_SESSION['cart'] as $product_id => $item) {
+                        ?>
+                              <div class="cart-item" id="cart-item-<?php echo $product_id; ?>">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                          <div class="flex-grow-1">
+                                                <h6 class="mb-1"><?php echo htmlspecialchars($item['name']); ?></h6>
+                                                <p class="mb-1 text-muted">$<?php echo number_format($item['price'], 2); ?> each</p>
+                                                <div class="quantity-control">
+                                                      <button class="quantity-btn" onclick="updateQuantity(<?php echo $product_id; ?>, -1)">-</button>
+                                                      <span class="mx-2"><?php echo $item['quantity']; ?></span>
+                                                      <button class="quantity-btn" onclick="updateQuantity(<?php echo $product_id; ?>, 1)">+</button>
+                                                </div>
+                                          </div>
+                                          <div class="text-end">
+                                                <h6 class="mb-1">$<?php echo number_format($item['price'] * $item['quantity'], 2); ?></h6>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="removeFromCart(<?php echo $product_id; ?>)">
+                                                      <i class="fas fa-trash"></i>
+                                                </button>
+                                          </div>
+                                    </div>
+                              </div>
+<?php
+                        }
+                  }
+                  $html = ob_get_clean();
+                  $total = 0;
+                  foreach ($_SESSION['cart'] as $item) {
+                        $total += $item['price'] * $item['quantity'];
+                  }
+                  echo json_encode(['success' => true, 'html' => $html, 'total' => '$' . number_format($total, 2)]);
+                  exit;
+
+            case 'clear_cart':
+                  $_SESSION['cart'] = [];
+                  echo json_encode(['success' => true, 'message' => 'Cart cleared successfully']);
+                  exit;
       }
 }
 
@@ -190,11 +294,13 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
             .products-section {
                   height: 100%;
+                  overflow-x: hidden;
                   overflow-y: auto;
                   background: #fff;
                   border-radius: 12px;
                   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
                   padding-bottom: 20px;
+                  scrollbar-width: none;
             }
 
             .cart-section {
@@ -219,6 +325,8 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                   border-radius: 12px;
                   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
                   background: #f9fafb;
+                  display: flex;
+                  flex-direction: column;
             }
 
             .product-card:hover {
@@ -233,6 +341,13 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                   object-fit: cover;
                   border-radius: 12px 12px 0 0;
                   background: #e9ecef;
+            }
+
+            .card-body {
+                  flex: 1 1 auto;
+                  display: flex;
+                  flex-direction: column;
+                  justify-content: space-between;
             }
 
             .card-title {
@@ -327,6 +442,19 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         padding: 0 !important;
                   }
             }
+
+            /* For Webkit browsers */
+            .products-section::-webkit-scrollbar,
+            .cart-items::-webkit-scrollbar {
+                  width: 8px;
+                  background: #f4f6fa;
+            }
+
+            .products-section::-webkit-scrollbar-thumb,
+            .cart-items::-webkit-scrollbar-thumb {
+                  background: #cfd8dc;
+                  border-radius: 8px;
+            }
       </style>
 </head>
 
@@ -400,27 +528,25 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                   <div class="col-md-8 h-100">
                         <div class="products-section">
                               <!-- Search and Filter -->
-                              <div class="search-box">
+                              <div class="search-box p-2">
                                     <div class="row">
                                           <div class="col-md-6">
-                                                <form method="GET" class="d-flex">
-                                                      <input type="text" name="search" class="form-control me-2" placeholder="Search products..." value="<?php echo htmlspecialchars($search); ?>">
-                                                      <button type="submit" class="btn btn-outline-primary">
+                                                <div class="d-flex">
+                                                      <input type="text" id="search-input" name="search" class="form-control me-2" placeholder="Search products..." value="<?php echo htmlspecialchars($search); ?>">
+                                                      <select id="category-select" name="category" class="form-select">
+                                                            <option value="">All Categories</option>
+                                                            <?php foreach ($categories as $cat): ?>
+                                                                  <option value="<?php echo htmlspecialchars($cat); ?>" <?php echo $category === $cat ? 'selected' : ''; ?>>
+                                                                        <?php echo htmlspecialchars($cat); ?>
+                                                                  </option>
+                                                            <?php endforeach; ?>
+                                                      </select>
+                                                      <button type="button" class="btn btn-outline-primary" onclick="fetchProducts()">
                                                             <i class="fas fa-search"></i>
                                                       </button>
-                                                </form>
+                                                </div>
                                           </div>
-                                          <div class="col-md-4">
-                                                <select name="category" class="form-select" onchange="this.form.submit()">
-                                                      <option value="">All Categories</option>
-                                                      <?php foreach ($categories as $cat): ?>
-                                                            <option value="<?php echo htmlspecialchars($cat); ?>" <?php echo $category === $cat ? 'selected' : ''; ?>>
-                                                                  <?php echo htmlspecialchars($cat); ?>
-                                                            </option>
-                                                      <?php endforeach; ?>
-                                                </select>
-                                          </div>
-                                          <div class="col-md-2">
+                                          <div class="col-md-2 d-flex justify-center">
                                                 <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
                                                       <i class="fas fa-times"></i> Clear
                                                 </button>
@@ -429,7 +555,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                               </div>
 
                               <!-- Products Grid -->
-                              <div class="row g-3 p-3">
+                              <div id="products-grid" class="row g-3 p-3">
                                     <?php foreach ($products as $product): ?>
                                           <div class="col-lg-3 col-md-4 col-sm-6">
                                                 <div class="card product-card" onclick="addToCart(<?php echo $product['id']; ?>)">
@@ -467,7 +593,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                   <!-- Cart Section -->
                   <div class="col-md-4 h-100">
                         <div class="cart-section bg-light">
-                              <div class="p-3 border-bottom">
+                              <div class="p-3 border-bottom m-2">
                                     <h5 class="mb-0">
                                           <i class="fas fa-shopping-cart me-2"></i>Shopping Cart
                                     </h5>
@@ -477,7 +603,10 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                               <div class="cart-items p-3">
                                     <div id="cart-items-container">
                                           <?php if (empty($_SESSION['cart'])): ?>
-                                                <p class="text-muted text-center mt-4">Cart is empty</p>
+                                                <div class="text-center mt-4 justify-content-center align-items-center d-flex flex-column w-100">
+                                                      <img src="../images/placeholder-cart.png" alt="Empty Cart" style="width:120px;opacity:0.5;" class="mb-2">
+                                                      <div class="text-muted">Cart is empty</div>
+                                                </div>
                                           <?php else: ?>
                                                 <?php foreach ($_SESSION['cart'] as $product_id => $item): ?>
                                                       <div class="cart-item" id="cart-item-<?php echo $product_id; ?>">
@@ -607,19 +736,52 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
       <script>
             let currentOrderId = null;
+            let searchTimeout = null;
+
+            function fetchProducts() {
+                  const search = document.getElementById('search-input').value;
+                  const category = document.getElementById('category-select').value;
+                  const formData = new URLSearchParams();
+                  formData.append('action', 'fetch_products');
+                  formData.append('search', search);
+                  formData.append('category', category);
+
+                  fetch('pos.php', {
+                              method: 'POST',
+                              headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded'
+                              },
+                              body: formData.toString()
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                              if (data.success) {
+                                    document.getElementById('products-grid').innerHTML = data.html;
+                              }
+                        });
+            }
+
+            function debouncedSearch() {
+                  clearTimeout(searchTimeout);
+                  searchTimeout = setTimeout(fetchProducts, 300);
+            }
+
+            document.getElementById('search-input').addEventListener('input', debouncedSearch);
+            document.getElementById('category-select').addEventListener('change', fetchProducts);
 
             function addToCart(productId) {
                   fetch('pos.php', {
                               method: 'POST',
                               headers: {
-                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                    'Content-Type': 'application/x-www-form-urlencoded'
                               },
                               body: `action=add_to_cart&product_id=${productId}&quantity=1`
                         })
                         .then(response => response.json())
                         .then(data => {
                               if (data.success) {
-                                    location.reload();
+                                    // Fetch and update cart section
+                                    fetchCart();
                               } else {
                                     alert(data.message);
                               }
@@ -645,7 +807,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         .then(response => response.json())
                         .then(data => {
                               if (data.success) {
-                                    location.reload();
+                                    fetchCart();
                               }
                         });
             }
@@ -661,7 +823,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         .then(response => response.json())
                         .then(data => {
                               if (data.success) {
-                                    location.reload();
+                                    fetchCart();
                               }
                         });
             }
@@ -675,7 +837,12 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                     },
                                     body: 'action=clear_cart'
                               })
-                              .then(() => location.reload());
+                              .then(response => response.json())
+                              .then(data => {
+                                    if (data.success) {
+                                          fetchCart();
+                                    }
+                              });
                   }
             }
 
@@ -706,6 +873,8 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                     document.getElementById('order-id').textContent = data.order_id;
                                     bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
                                     new bootstrap.Modal(document.getElementById('successModal')).show();
+                                    // Update cart after successful payment
+                                    fetchCart();
                               } else {
                                     alert(data.message);
                               }
@@ -725,6 +894,23 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         showPaymentModal();
                   }
             });
+
+            function fetchCart() {
+                  fetch('pos.php', {
+                              method: 'POST',
+                              headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded'
+                              },
+                              body: 'action=fetch_cart'
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                              if (data.success) {
+                                    document.getElementById('cart-items-container').innerHTML = data.html;
+                                    document.getElementById('cart-total').textContent = data.total;
+                              }
+                        });
+            }
       </script>
 </body>
 

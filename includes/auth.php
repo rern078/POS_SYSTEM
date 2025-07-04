@@ -146,6 +146,7 @@ function getSalesData($period = 'month')
 function getTopProducts($limit = 5)
 {
       $pdo = getDBConnection();
+      $limit = (int)$limit; // Ensure it's an integer
       $stmt = $pdo->prepare("
         SELECT p.name, SUM(oi.quantity) as total_sold, SUM(oi.quantity * oi.price) as total_revenue
         FROM products p
@@ -154,8 +155,8 @@ function getTopProducts($limit = 5)
         WHERE o.status = 'completed'
         GROUP BY p.id, p.name
         ORDER BY total_sold DESC
-        LIMIT ?
+        LIMIT $limit
     ");
-      $stmt->execute([$limit]);
+      $stmt->execute();
       return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }

@@ -398,20 +398,15 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                           </tr>
                                     </thead>
                                     <tbody>
-                                          <?php foreach ($products as $product): ?>
+                                          <?php foreach ($products as $product):
+                                                $img_path = !empty($product['image_path']) ? '../' . htmlspecialchars($product['image_path']) : '../images/placeholder.jpg';
+                                          ?>
                                                 <tr>
                                                       <td><?php echo $product['id']; ?></td>
                                                       <td>
-                                                            <?php if ($product['image_path']): ?>
-                                                                  <img src="../<?php echo htmlspecialchars($product['image_path']); ?>"
-                                                                        alt="<?php echo htmlspecialchars($product['name']); ?>"
-                                                                        class="img-thumbnail" style="width: 50px; height: 50px; object-fit: cover;">
-                                                            <?php else: ?>
-                                                                  <div class="bg-light d-flex align-items-center justify-content-center"
-                                                                        style="width: 50px; height: 50px;">
-                                                                        <i class="fas fa-image text-muted"></i>
-                                                                  </div>
-                                                            <?php endif; ?>
+                                                            <img src="<?php echo $img_path; ?>"
+                                                                  alt="<?php echo htmlspecialchars($product['name']); ?>"
+                                                                  class="img-thumbnail" style="width: 50px; height: 50px; object-fit: cover;">
                                                       </td>
                                                       <td>
                                                             <span class="badge bg-info"><?php echo htmlspecialchars($product['product_code'] ?? 'N/A'); ?></span>
