@@ -378,7 +378,12 @@ $recent_activity = [];
                                                                   <td><?php echo date('M d, Y', strtotime($user['created_at'])); ?></td>
                                                                   <td><?php echo date('M d, Y H:i', strtotime($user['updated_at'])); ?></td>
                                                                   <td>
-                                                                        <button class="btn btn-sm btn-primary" onclick="editUser(<?php echo $user['id']; ?>)">
+                                                                        <button class="btn btn-sm btn-primary" onclick="editUser(
+                                                                            <?php echo $user['id']; ?>, 
+                                                                            '<?php echo htmlspecialchars($user['username'], ENT_QUOTES); ?>', 
+                                                                            '<?php echo htmlspecialchars($user['email'], ENT_QUOTES); ?>', 
+                                                                            '<?php echo $user['role']; ?>'
+                                                                        )">
                                                                               <i class="fas fa-edit"></i>
                                                                         </button>
                                                                         <?php if ($user['id'] != $_SESSION['user_id']): ?>
@@ -582,10 +587,11 @@ $recent_activity = [];
             });
 
             // User management functions
-            function editUser(userId) {
-                  // This would typically fetch user data via AJAX
-                  // For now, we'll just show the modal
+            function editUser(userId, username, email, role) {
                   document.getElementById('edit_user_id').value = userId;
+                  document.getElementById('edit_username').value = username;
+                  document.getElementById('edit_email').value = email;
+                  document.getElementById('edit_role').value = role;
                   new bootstrap.Modal(document.getElementById('editUserModal')).show();
             }
 
