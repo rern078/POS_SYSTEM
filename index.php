@@ -50,6 +50,9 @@ if (isset($_SESSION['user_id'])) {
                                     <a class="nav-link" href="#features">Features</a>
                               </li>
                               <li class="nav-item">
+                                    <a class="nav-link" href="#products">Products</a>
+                              </li>
+                              <li class="nav-item">
                                     <a class="nav-link" href="#about">About</a>
                               </li>
                               <li class="nav-item">
@@ -118,7 +121,7 @@ if (isset($_SESSION['user_id'])) {
                   </div>
 
                   <div class="row g-4">
-                        <div class="col-lg-4 col-md-6">
+                        <div class="col-lg-4 col-md-6 powerful-features">
                               <div class="card feature-card">
                                     <div class="card-body text-center">
                                           <div class="feature-icon bg-primary text-white">
@@ -133,7 +136,7 @@ if (isset($_SESSION['user_id'])) {
                               </div>
                         </div>
 
-                        <div class="col-lg-4 col-md-6">
+                        <div class="col-lg-4 col-md-6 powerful-features">
                               <div class="card feature-card">
                                     <div class="card-body text-center">
                                           <div class="feature-icon bg-success text-white">
@@ -148,7 +151,7 @@ if (isset($_SESSION['user_id'])) {
                               </div>
                         </div>
 
-                        <div class="col-lg-4 col-md-6">
+                        <div class="col-lg-4 col-md-6 powerful-features">
                               <div class="card feature-card">
                                     <div class="card-body text-center">
                                           <div class="feature-icon bg-info text-white">
@@ -163,7 +166,7 @@ if (isset($_SESSION['user_id'])) {
                               </div>
                         </div>
 
-                        <div class="col-lg-4 col-md-6">
+                        <div class="col-lg-4 col-md-6 powerful-features">
                               <div class="card feature-card">
                                     <div class="card-body text-center">
                                           <div class="feature-icon bg-warning text-white">
@@ -178,7 +181,7 @@ if (isset($_SESSION['user_id'])) {
                               </div>
                         </div>
 
-                        <div class="col-lg-4 col-md-6">
+                        <div class="col-lg-4 col-md-6 powerful-features">
                               <div class="card feature-card">
                                     <div class="card-body text-center">
                                           <div class="feature-icon bg-danger text-white">
@@ -193,7 +196,7 @@ if (isset($_SESSION['user_id'])) {
                               </div>
                         </div>
 
-                        <div class="col-lg-4 col-md-6">
+                        <div class="col-lg-4 col-md-6 powerful-features">
                               <div class="card feature-card">
                                     <div class="card-body text-center">
                                           <div class="feature-icon bg-secondary text-white">
@@ -204,6 +207,114 @@ if (isset($_SESSION['user_id'])) {
                                                 Enterprise-grade security with data encryption and regular backups.
                                                 Your business data is safe with us.
                                           </p>
+                                    </div>
+                              </div>
+                        </div>
+                  </div>
+            </div>
+      </section>
+
+      <!-- Products Section -->
+      <section id="products" class="py-5 bg-light">
+            <div class="container">
+                  <div class="row text-center mb-5">
+                        <div class="col-lg-8 mx-auto">
+                              <h2 class="display-5 fw-bold mb-3">Featured Products</h2>
+                              <p class="lead text-muted">
+                                    Discover our wide range of quality products available in our POS system
+                              </p>
+                        </div>
+                  </div>
+
+                  <div class="row g-4">
+                        <?php
+                        // Get featured products from database
+                        $pdo = getDBConnection();
+                        $stmt = $pdo->prepare("SELECT * FROM products WHERE stock_quantity > 0 ORDER BY RAND() LIMIT 8");
+                        $stmt->execute();
+                        $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                        foreach ($featured_products as $product):
+                              $img_path = !empty($product['image_path']) ? htmlspecialchars($product['image_path']) : 'images/placeholder.jpg';
+                              $display_price = $product['discount_price'] ? $product['discount_price'] : $product['price'];
+                              $has_discount = $product['discount_price'] && $product['discount_price'] < $product['price'];
+                        ?>
+                              <div class="col-lg-3 col-md-6 product-item-container">
+                                    <div class="card product-card h-100">
+                                          <div class="product-image-container">
+                                                <img src="<?php echo $img_path; ?>"
+                                                      class="card-img-top product-image"
+                                                      alt="<?php echo htmlspecialchars($product['name']); ?>">
+                                                <?php if ($has_discount): ?>
+                                                      <div class="discount-badge">
+                                                            <span class="badge bg-danger">
+                                                                  <?php
+                                                                  $discount_percent = round((($product['price'] - $product['discount_price']) / $product['price']) * 100);
+                                                                  echo $discount_percent . '% OFF';
+                                                                  ?>
+                                                            </span>
+                                                      </div>
+                                                <?php endif; ?>
+                                          </div>
+                                          <div class="card-body d-flex flex-column">
+                                                <h6 class="card-title"><?php echo htmlspecialchars($product['name']); ?></h6>
+                                                <p class="card-text text-muted small">
+                                                      <?php echo htmlspecialchars(substr($product['description'], 0, 60)) . (strlen($product['description']) > 60 ? '...' : ''); ?>
+                                                </p>
+                                                <div class="mt-auto">
+                                                      <div class="price-container">
+                                                            <?php if ($has_discount): ?>
+                                                                  <span class="original-price text-muted text-decoration-line-through">
+                                                                        $<?php echo number_format($product['price'], 2); ?>
+                                                                  </span>
+                                                            <?php endif; ?>
+                                                            <span class="current-price fw-bold text-primary">
+                                                                  $<?php echo number_format($display_price, 2); ?>
+                                                            </span>
+                                                      </div>
+                                                      <div class="stock-info small text-muted mt-1">
+                                                            <i class="fas fa-box me-1"></i>
+                                                            <?php echo $product['stock_quantity']; ?> in stock
+                                                      </div>
+                                                      <div class="category-badge mt-2">
+                                                            <span class="badge bg-light text-dark">
+                                                                  <?php echo htmlspecialchars($product['category'] ?? 'Uncategorized'); ?>
+                                                            </span>
+                                                      </div>
+                                                </div>
+                                          </div>
+                                    </div>
+                              </div>
+                        <?php endforeach; ?>
+                  </div>
+
+                  <div class="row mt-5">
+                        <div class="col-12 text-center">
+                              <a href="login.php" class="btn btn-primary btn-custom">
+                                    <i class="fas fa-store me-2"></i>View All Products
+                              </a>
+                        </div>
+                  </div>
+            </div>
+      </section>
+
+      <!-- Online Order Section -->
+      <section id="online-order" class="py-5">
+            <div class="container">
+                  <div class="row justify-content-center">
+                        <div class="col-lg-8">
+                              <div class="card shadow-lg border-0 online-order-card text-center p-4">
+                                    <div class="card-body">
+                                          <div class="mb-3">
+                                                <i class="fas fa-shopping-cart fa-3x text-primary"></i>
+                                          </div>
+                                          <h2 class="fw-bold mb-3">Order Online</h2>
+                                          <p class="lead text-muted mb-4">
+                                                Experience the convenience of placing your orders online! Browse our products, add to cart, and complete your purchase from anywhere, anytime.
+                                          </p>
+                                          <a href="login.php" class="btn btn-success btn-lg btn-custom">
+                                                <i class="fas fa-basket-shopping me-2"></i>Order Online Now
+                                          </a>
                                     </div>
                               </div>
                         </div>
@@ -364,17 +475,19 @@ if (isset($_SESSION['user_id'])) {
             const observerOptions = {
                   threshold: 0.5
             };
-
             const observer = new IntersectionObserver(function(entries) {
                   entries.forEach(entry => {
                         if (entry.isIntersecting) {
                               entry.target.style.opacity = '1';
                               entry.target.style.transform = 'translateY(0)';
+                        } else {
+                              entry.target.style.opacity = '0';
+                              entry.target.style.transform = 'translateY(20px)';
                         }
                   });
             }, observerOptions);
 
-            document.querySelectorAll('.stat-number').forEach(stat => {
+            document.querySelectorAll('.stat-number, .product-item-container, .powerful-features').forEach(stat => {
                   stat.style.opacity = '0';
                   stat.style.transform = 'translateY(20px)';
                   stat.style.transition = 'all 0.6s ease';
