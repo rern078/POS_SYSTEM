@@ -372,7 +372,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
       // Close mobile sidebar when clicking outside
       document.addEventListener('click', function (e) {
-            if (window.innerWidth <= 992) {
+            if (window.innerWidth <= 992 && sidebar && sidebarToggleBtn) {
                   if (!sidebar.contains(e.target) && !sidebarToggleBtn.contains(e.target)) {
                         sidebar.classList.remove('show');
                   }
