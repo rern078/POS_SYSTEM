@@ -1,0 +1,237 @@
+/* Cart Sidebar Styles */
+.cart-sidebar {
+      position: fixed;
+      top: 0;
+      right: -400px;
+      width: 400px;
+      height: 100vh;
+      background: white;
+      box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+      transition: right 0.3s ease;
+      z-index: 1050;
+      overflow-y: auto;
+}
+
+.cart-sidebar.open {
+      right: 0;
+}
+
+.cart-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1040;
+      display: none;
+}
+
+.cart-overlay.show {
+      display: block;
+}
+
+.cart-header {
+      background: #f8f9fa;
+      padding: 1rem;
+      border-bottom: 1px solid #dee2e6;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+}
+
+.cart-items {
+      padding: 1rem;
+      max-height: 60vh;
+      overflow-y: auto;
+      padding-bottom: 120px;
+      /* Space for footer */
+}
+
+.cart-item {
+      border-bottom: 1px solid #eee;
+      padding: 10px 0;
+}
+
+.quantity-control {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+}
+
+.quantity-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: #f1f3f7;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1.2rem;
+      color: #333;
+      transition: background 0.15s;
+}
+
+.quantity-btn:hover {
+      background: #e2e6ea;
+}
+
+.cart-footer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      padding: 1rem;
+      border-top: 1px solid #dee2e6;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.cart-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: #dc3545;
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+}
+
+/* Product Card Styles */
+.product-card {
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.product-card:hover {
+      transform: translateY(-2px) scale(1.03);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.10);
+      background: #f1f3f7;
+}
+
+.add-to-cart-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 3;
+}
+
+.product-card:hover .add-to-cart-btn {
+      opacity: 1;
+}
+
+.add-to-cart-btn:hover {
+      background: #007bff;
+      color: white;
+}
+
+.product-image-container {
+      position: relative;
+      overflow: hidden;
+}
+
+.discount-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 2;
+}
+
+/* Quantity Overlay Styles */
+.quantity-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+      border-radius: 12px;
+      backdrop-filter: blur(5px);
+      transition: all 0.3s ease;
+}
+
+.quantity-controls {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 15px;
+}
+
+.quantity-display {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #333;
+      min-width: 40px;
+      text-align: center;
+      background: #f8f9fa;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 2px solid #dee2e6;
+      font-weight: bold;
+      color: #495057;
+}
+
+.quantity-actions {
+      display: flex;
+      gap: 10px;
+}
+
+.quantity-actions .btn {
+      padding: 8px 16px;
+      font-size: 0.9rem;
+}
+
+.product-card:hover .quantity-overlay {
+      opacity: 1;
+}
+
+.quantity-controls .quantity-btn {
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.2rem;
+      font-weight: bold;
+      transition: all 0.2s ease;
+}
+
+.quantity-controls .quantity-btn:hover {
+      background: #0056b3;
+      transform: scale(1.1);
+}
+
+.quantity-controls .quantity-btn:active {
+      transform: scale(0.95);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+      .cart-sidebar {
+            width: 100%;
+            right: -100%;
+      }
+}

@@ -70,28 +70,8 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
       <!-- Custom CSS -->
       <link rel="stylesheet" href="../admin/assets/css/admin.css">
 
-      <style>
-            .product-card {
-                  transition: transform 0.2s, box-shadow 0.2s;
-                  height: 100%;
-            }
-
-            .product-card:hover {
-                  transform: translateY(-5px);
-                  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            }
-
-            .product-image {
-                  height: 200px;
-                  object-fit: cover;
-            }
-
-            .stock-badge {
-                  position: absolute;
-                  top: 10px;
-                  right: 10px;
-            }
-      </style>
+      <!-- Products CSS -->
+      <link rel="stylesheet" href="../assets/css/products.css">
 </head>
 
 <body>

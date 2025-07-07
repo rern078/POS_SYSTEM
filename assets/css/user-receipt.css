@@ -1,0 +1,82 @@
+/* User Receipt Styles */
+@media print {
+      .no-print {
+            display: none !important;
+      }
+
+      body {
+            margin: 0;
+            padding: 20px;
+      }
+
+      .receipt-container {
+            max-width: 100% !important;
+            box-shadow: none !important;
+      }
+}
+
+.receipt-container {
+      max-width: 400px;
+      margin: 20px auto;
+      border: 1px solid #ddd;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      background: white;
+}
+
+.receipt-header {
+      text-align: center;
+      padding: 20px;
+      border-bottom: 2px solid #000;
+}
+
+.receipt-body {
+      padding: 20px;
+}
+
+.receipt-footer {
+      text-align: center;
+      padding: 20px;
+      border-top: 1px solid #ddd;
+      background: #f8f9fa;
+}
+
+.item-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px dotted #eee;
+}
+
+.item-name {
+      flex: 2;
+}
+
+.item-quantity {
+      flex: 1;
+      text-align: center;
+}
+
+.item-price {
+      flex: 1;
+      text-align: right;
+}
+
+.total-row {
+      font-weight: bold;
+      font-size: 1.1em;
+      border-top: 2px solid #000;
+      padding-top: 10px;
+      margin-top: 10px;
+}
+
+.store-info {
+      font-size: 0.9em;
+      color: #666;
+}
+
+.order-info {
+      font-size: 0.8em;
+      color: #888;
+      margin-bottom: 15px;
+}
