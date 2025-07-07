@@ -1021,8 +1021,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             // Cart Functions
             function openCart() {
-                  document.getElementById('cartSidebar').classList.add('open');
-                  document.getElementById('cartOverlay').classList.add('show');
+                  console.log('Opening cart...'); // Debug log
+
+                  const cartSidebar = document.getElementById('cartSidebar');
+                  const cartOverlay = document.getElementById('cartOverlay');
+
+                  if (!cartSidebar || !cartOverlay) {
+                        console.error('Cart elements not found');
+                        return;
+                  }
+
+                  cartSidebar.classList.add('open');
+                  cartOverlay.classList.add('show');
+
+                  // Ensure buttons are properly initialized
+                  const checkoutBtn = document.getElementById('checkoutBtn');
+                  const clearCartBtn = document.getElementById('clearCartBtn');
+
+                  if (checkoutBtn) {
+                        checkoutBtn.disabled = false;
+                        checkoutBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Checkout';
+                  }
+
+                  // Fetch cart data
                   fetchGuestCart();
             }
 
@@ -1175,14 +1196,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                     const checkoutBtn = document.getElementById('checkoutBtn');
                                     const clearCartBtn = document.getElementById('clearCartBtn');
 
-                                    if (data.html.includes('Cart is empty')) {
-                                          checkoutBtn.style.display = 'none';
-                                          clearCartBtn.style.display = 'none';
+                                    console.log('Cart data:', data); // Debug log
+
+                                    if (data.html.includes('Cart is empty') || data.total === '$0.00' || data.total === '$0') {
+                                          if (checkoutBtn) {
+                                                checkoutBtn.style.display = 'none';
+                                                checkoutBtn.disabled = true;
+                                          }
+                                          if (clearCartBtn) {
+                                                clearCartBtn.style.display = 'none';
+                                          }
                                     } else {
-                                          checkoutBtn.style.display = 'block';
-                                          clearCartBtn.style.display = 'block';
+                                          if (checkoutBtn) {
+                                                checkoutBtn.style.display = 'block';
+                                                checkoutBtn.disabled = false;
+                                                checkoutBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Checkout';
+
+                                                // Add a small delay to ensure button is fully ready
+                                                setTimeout(() => {
+                                                      if (checkoutBtn) {
+                                                            checkoutBtn.disabled = false;
+                                                      }
+                                                }, 100);
+                                          }
+                                          if (clearCartBtn) {
+                                                clearCartBtn.style.display = 'block';
+                                          }
                                     }
                               }
+                        })
+                        .catch(error => {
+                              console.error('Error fetching cart:', error);
                         });
             }
 
@@ -1215,9 +1259,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
 
             function showPaymentModal() {
+                  console.log('showPaymentModal called'); // Debug log
+
                   const total = document.getElementById('cartTotal').textContent;
-                  document.getElementById('modal-total').textContent = total.replace('$', '');
-                  new bootstrap.Modal(document.getElementById('paymentModal')).show();
+                  const checkoutBtn = document.getElementById('checkoutBtn');
+
+                  console.log('Cart total:', total); // Debug log
+                  console.log('Checkout button:', checkoutBtn); // Debug log
+
+                  // Check if checkout button exists
+                  if (!checkoutBtn) {
+                        console.error('Checkout button not found');
+                        showNotification('Error: Checkout button not found', 'error');
+                        return;
+                  }
+
+                  // Check if cart total is null, empty, or zero
+                  if (!total || total === '$0.00' || total === '$0' || total.trim() === '') {
+                        showNotification('Cart is empty. Please add items before checkout.', 'error');
+                        return;
+                  }
+
+                  // Check if button is visible
+                  if (checkoutBtn.style.display === 'none') {
+                        showNotification('Please wait while cart is loading...', 'error');
+                        return;
+                  }
+
+                  // Check if button is already disabled
+                  if (checkoutBtn.disabled) {
+                        console.log('Checkout button is disabled, skipping...');
+                        return;
+                  }
+
+                  // Disable checkout button to prevent multiple clicks
+                  checkoutBtn.disabled = true;
+                  checkoutBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+
+                  try {
+                        document.getElementById('modal-total').textContent = total.replace('$', '');
+                        const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+                        paymentModal.show();
+                        console.log('Payment modal opened successfully'); // Debug log
+                  } catch (error) {
+                        console.error('Error showing payment modal:', error);
+                        showNotification('Error opening payment modal', 'error');
+
+                        // Re-enable button on error
+                        checkoutBtn.disabled = false;
+                        checkoutBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Checkout';
+                        return;
+                  }
+
+                  // Re-enable button after modal is shown
+                  setTimeout(() => {
+                        if (checkoutBtn) {
+                              checkoutBtn.disabled = false;
+                              checkoutBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Checkout';
+                              console.log('Checkout button re-enabled'); // Debug log
+                        }
+                  }, 1000);
             }
 
             function showNotification(message, type) {

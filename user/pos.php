@@ -32,6 +32,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   $product = $stmt->fetch(PDO::FETCH_ASSOC);
 
                   if ($product) {
+                        // Check stock availability
+                        $current_cart_quantity = isset($_SESSION['cart'][$product_id]) ? $_SESSION['cart'][$product_id]['quantity'] : 0;
+                        $requested_quantity = $current_cart_quantity + $quantity;
+
+                        if ($requested_quantity > $product['stock_quantity']) {
+                              echo json_encode([
+                                    'success' => false,
+                                    'message' => "Insufficient stock! Available: {$product['stock_quantity']}, Requested: {$requested_quantity}"
+                              ]);
+                              exit;
+                        }
+
                         if (isset($_SESSION['cart'][$product_id])) {
                               $_SESSION['cart'][$product_id]['quantity'] += $quantity;
                         } else {
@@ -57,6 +69,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         if ($quantity <= 0) {
                               unset($_SESSION['cart'][$product_id]);
                         } else {
+                              // Check stock availability
+                              $stmt = $pdo->prepare("SELECT stock_quantity FROM products WHERE id = ?");
+                              $stmt->execute([$product_id]);
+                              $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                              if ($product && $quantity > $product['stock_quantity']) {
+                                    echo json_encode([
+                                          'success' => false,
+                                          'message' => "Insufficient stock! Available: {$product['stock_quantity']}, Requested: {$quantity}"
+                                    ]);
+                                    exit;
+                              }
+
                               $_SESSION['cart'][$product_id]['quantity'] = $quantity;
                         }
                   }
@@ -159,7 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   foreach ($products as $product) {
                         $img_path = !empty($product['image_path']) ? '../' . htmlspecialchars($product['image_path']) : '../images/placeholder.jpg';
 ?>
-                        <div class="col-lg-3 col-md-4 col-sm-6">
+                        <div class="col-lg-3 col-md-4 col-6">
                               <div class="card product-card" onclick="addToCart(<?php echo $product['id']; ?>)">
                                     <img src="<?php echo $img_path; ?>"
                                           class="card-img-top product-image"
@@ -199,6 +224,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                               </div>';
                   } else {
                         foreach ($_SESSION['cart'] as $product_id => $item) {
+                              // Get current stock for this product
+                              $stmt = $pdo->prepare("SELECT stock_quantity FROM products WHERE id = ?");
+                              $stmt->execute([$product_id]);
+                              $product = $stmt->fetch(PDO::FETCH_ASSOC);
+                              $current_stock = $product ? $product['stock_quantity'] : 0;
                         ?>
                               <div class="cart-item" id="cart-item-<?php echo $product_id; ?>">
                                     <div class="d-flex justify-content-between align-items-start">
@@ -207,9 +237,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                                 <p class="mb-1 text-muted">$<?php echo number_format($item['price'], 2); ?> each</p>
                                                 <div class="quantity-control">
                                                       <button class="quantity-btn" onclick="updateQuantity(<?php echo $product_id; ?>, -1)">-</button>
-                                                      <span class="mx-2"><?php echo $item['quantity']; ?></span>
+                                                      <input type="number"
+                                                            class="form-control mx-2 quantity-input"
+                                                            value="<?php echo $item['quantity']; ?>"
+                                                            min="1"
+                                                            max="<?php echo $current_stock; ?>"
+                                                            style="width: 60px; text-align: center;"
+                                                            onchange="updateQuantityDirect(<?php echo $product_id; ?>, this.value)"
+                                                            onkeypress="return event.charCode >= 48 && event.charCode <= 57">
                                                       <button class="quantity-btn" onclick="updateQuantity(<?php echo $product_id; ?>, 1)">+</button>
                                                 </div>
+                                                <small class="text-muted">Available: <?php echo $current_stock; ?></small>
                                           </div>
                                           <div class="text-end">
                                                 <h6 class="mb-1">$<?php echo number_format($item['price'] * $item['quantity'], 2); ?></h6>
@@ -219,15 +257,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                           </div>
                                     </div>
                               </div>
-<?php
+                  <?php
                         }
                   }
-                  $html = ob_get_clean();
+                  $cart_html = ob_get_clean();
+
+                  // Generate payment section HTML
+                  ob_start();
                   $total = 0;
                   foreach ($_SESSION['cart'] as $item) {
                         $total += $item['price'] * $item['quantity'];
                   }
-                  echo json_encode(['success' => true, 'html' => $html, 'total' => '$' . number_format($total, 2)]);
+                  ?>
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">Total:</h5>
+                        <h4 class="mb-0 text-primary" id="cart-total">$<?php echo number_format($total, 2); ?></h4>
+                  </div>
+
+                  <?php if (!empty($_SESSION['cart'])): ?>
+                        <button class="btn btn-success btn-lg w-100 mb-3" onclick="showPaymentModal()">
+                              <i class="fas fa-credit-card me-2"></i>Process Payment
+                        </button>
+                        <button class="btn btn-outline-secondary w-100" onclick="clearCart()">
+                              <i class="fas fa-trash me-2"></i>Clear Cart
+                        </button>
+                  <?php endif; ?>
+<?php
+                  $payment_html = ob_get_clean();
+
+                  echo json_encode([
+                        'success' => true,
+                        'html' => $cart_html,
+                        'total' => '$' . number_format($total, 2),
+                        'payment_html' => $payment_html
+                  ]);
                   exit;
 
             case 'clear_cart':
@@ -386,6 +449,28 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                   background: #e2e6ea;
             }
 
+            .quantity-input {
+                  border: 1px solid #dee2e6;
+                  border-radius: 6px;
+                  font-size: 0.9rem;
+                  padding: 4px 8px;
+            }
+
+            .quantity-input:focus {
+                  border-color: #0d6efd;
+                  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+            }
+
+            .quantity-input::-webkit-outer-spin-button,
+            .quantity-input::-webkit-inner-spin-button {
+                  -webkit-appearance: none;
+                  margin: 0;
+            }
+
+            .quantity-input[type=number] {
+                  -moz-appearance: textfield;
+            }
+
             .payment-section {
                   border-top: 2px solid #dee2e6;
                   padding-top: 15px;
@@ -396,16 +481,199 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
             .search-box {
                   position: sticky;
                   top: 0;
-                  background: #fff;
+                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                   z-index: 10;
-                  padding: 18px 0 10px 0;
-                  border-bottom: 1px solid #dee2e6;
-                  margin-bottom: 10px;
+                  padding: .2rem;
+                  border-radius: 0 0 15px 15px;
+                  margin: .1rem 0;
+                  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             }
 
-            .search-box input,
-            .search-box select {
+            .search-container {
+                  background: rgba(255, 255, 255, 0.95);
+                  border-radius: 12px;
+                  padding: 20px;
+                  backdrop-filter: blur(10px);
+                  border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+
+            .search-title {
+                  color: #495057;
+                  font-weight: 600;
+                  font-size: 1.1rem;
+                  margin-bottom: 15px;
+            }
+
+            .search-controls {
+                  display: flex;
+                  flex-direction: column;
+                  gap: 15px;
+            }
+
+            .search-row {
+                  display: grid;
+                  grid-template-columns: 2fr 1fr auto;
+                  gap: 15px;
+                  align-items: end;
+            }
+
+            .search-input-group {
+                  display: flex;
+                  flex-direction: column;
+                  gap: 8px;
+            }
+
+            .search-label {
+                  font-size: 0.9rem;
+                  font-weight: 600;
+                  color: #495057;
+                  margin-bottom: 0;
+            }
+
+            .input-with-icon {
+                  position: relative;
+            }
+
+            .search-icon {
+                  position: absolute;
+                  left: 12px;
+                  top: 50%;
+                  transform: translateY(-50%);
+                  color: #6c757d;
+                  z-index: 2;
+            }
+
+            .search-input {
+                  padding-left: 40px;
                   border-radius: 8px;
+                  border: 2px solid #e9ecef;
+                  transition: all 0.3s ease;
+                  height: 45px;
+            }
+
+            .search-input:focus {
+                  border-color: #667eea;
+                  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            }
+
+            .category-select {
+                  border-radius: 8px;
+                  border: 2px solid #e9ecef;
+                  transition: all 0.3s ease;
+                  height: 45px;
+            }
+
+            .category-select:focus {
+                  border-color: #667eea;
+                  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            }
+
+            .search-actions {
+                  display: flex;
+                  gap: 10px;
+                  align-items: end;
+            }
+
+            .search-btn {
+                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                  border: none;
+                  border-radius: 8px;
+                  padding: 12px 20px;
+                  font-weight: 600;
+                  transition: all 0.3s ease;
+                  height: 45px;
+            }
+
+            .search-btn:hover {
+                  transform: translateY(-2px);
+                  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            }
+
+            .clear-btn {
+                  border-radius: 8px;
+                  padding: 12px 20px;
+                  font-weight: 600;
+                  transition: all 0.3s ease;
+                  height: 45px;
+            }
+
+            .clear-btn:hover {
+                  transform: translateY(-2px);
+                  box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+            }
+
+            @media (max-width: 768px) {
+                  .search-row {
+                        grid-template-columns: 1fr;
+                        gap: 12px;
+                  }
+
+                  .search-actions {
+                        justify-content: stretch;
+                  }
+
+                  .search-btn,
+                  .clear-btn {
+                        flex: 1;
+                  }
+
+                  /* Mobile product grid optimizations */
+                  .product-card {
+                        margin-bottom: 10px;
+                  }
+
+                  .product-image {
+                        height: 120px;
+                  }
+
+                  .card-title {
+                        font-size: 0.9rem;
+                        line-height: 1.2;
+                  }
+
+                  .card-text {
+                        font-size: 0.8rem;
+                  }
+
+                  .badge {
+                        font-size: 0.7rem;
+                  }
+            }
+
+            @media (max-width: 576px) {
+
+                  /* Extra small devices - optimize for 2 columns */
+                  .product-card {
+                        margin-bottom: 8px;
+                  }
+
+                  .product-image {
+                        height: 100px;
+                  }
+
+                  .card-body {
+                        padding: 0.75rem;
+                  }
+
+                  .card-title {
+                        font-size: 0.85rem;
+                        margin-bottom: 0.5rem;
+                  }
+
+                  .card-text {
+                        font-size: 0.75rem;
+                        margin-bottom: 0.5rem;
+                  }
+
+                  .badge {
+                        font-size: 0.65rem;
+                        padding: 0.25rem 0.5rem;
+                  }
+
+                  .row.g-3 {
+                        --bs-gutter-x: 0.75rem;
+                        --bs-gutter-y: 0.75rem;
+                  }
             }
 
             .btn-success.btn-lg {
@@ -528,28 +796,49 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                   <div class="col-md-8 h-100">
                         <div class="products-section">
                               <!-- Search and Filter -->
-                              <div class="search-box p-2">
-                                    <div class="row">
-                                          <div class="col-md-6">
-                                                <div class="d-flex">
-                                                      <input type="text" id="search-input" name="search" class="form-control me-2" placeholder="Search products..." value="<?php echo htmlspecialchars($search); ?>">
-                                                      <select id="category-select" name="category" class="form-select">
-                                                            <option value="">All Categories</option>
-                                                            <?php foreach ($categories as $cat): ?>
-                                                                  <option value="<?php echo htmlspecialchars($cat); ?>" <?php echo $category === $cat ? 'selected' : ''; ?>>
-                                                                        <?php echo htmlspecialchars($cat); ?>
-                                                                  </option>
-                                                            <?php endforeach; ?>
-                                                      </select>
-                                                      <button type="button" class="btn btn-outline-primary" onclick="fetchProducts()">
-                                                            <i class="fas fa-search"></i>
-                                                      </button>
-                                                </div>
+                              <div class="search-box">
+                                    <div class="search-container">
+                                          <div class="search-header">
+                                                <h6 class="search-title mb-3">
+                                                      <i class="fas fa-search me-2"></i>Search & Filter Products
+                                                </h6>
                                           </div>
-                                          <div class="col-md-2 d-flex justify-center">
-                                                <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
-                                                      <i class="fas fa-times"></i> Clear
-                                                </button>
+                                          <div class="search-controls">
+                                                <div class="search-row">
+                                                      <div class="search-input-group">
+                                                            <label for="search-input" class="search-label">Search</label>
+                                                            <div class="input-with-icon">
+                                                                  <i class="fas fa-search search-icon"></i>
+                                                                  <input type="text"
+                                                                        id="search-input"
+                                                                        name="search"
+                                                                        class="form-control search-input"
+                                                                        placeholder="Search by name or code..."
+                                                                        value="<?php echo htmlspecialchars($search); ?>">
+                                                            </div>
+                                                      </div>
+
+                                                      <div class="search-input-group">
+                                                            <label for="category-select" class="search-label">Category</label>
+                                                            <select id="category-select" name="category" class="form-select category-select">
+                                                                  <option value="">All Categories</option>
+                                                                  <?php foreach ($categories as $cat): ?>
+                                                                        <option value="<?php echo htmlspecialchars($cat); ?>" <?php echo $category === $cat ? 'selected' : ''; ?>>
+                                                                              <?php echo htmlspecialchars($cat); ?>
+                                                                        </option>
+                                                                  <?php endforeach; ?>
+                                                            </select>
+                                                      </div>
+
+                                                      <div class="search-actions">
+                                                            <button type="button" class="btn btn-primary search-btn" onclick="fetchProducts()">
+                                                                  <i class="fas fa-search me-2"></i>Search
+                                                            </button>
+                                                            <button type="button" class="btn btn-outline-secondary clear-btn" onclick="clearFilters()">
+                                                                  <i class="fas fa-times me-2"></i>Clear
+                                                            </button>
+                                                      </div>
+                                                </div>
                                           </div>
                                     </div>
                               </div>
@@ -557,7 +846,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                               <!-- Products Grid -->
                               <div id="products-grid" class="row g-3 p-3">
                                     <?php foreach ($products as $product): ?>
-                                          <div class="col-lg-3 col-md-4 col-sm-6">
+                                          <div class="col-lg-3 col-md-4 col-6">
                                                 <div class="card product-card" onclick="addToCart(<?php echo $product['id']; ?>)">
                                                       <?php
                                                       $img_path = !empty($product['image_path']) ? '../' . htmlspecialchars($product['image_path']) : '../images/placeholder.jpg';
@@ -789,7 +1078,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
             }
 
             function updateQuantity(productId, change) {
-                  const currentQty = parseInt(document.querySelector(`#cart-item-${productId} .quantity-control span`).textContent);
+                  const currentQty = parseInt(document.querySelector(`#cart-item-${productId} .quantity-control input`).value);
                   const newQty = currentQty + change;
 
                   if (newQty <= 0) {
@@ -807,6 +1096,38 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         .then(response => response.json())
                         .then(data => {
                               if (data.success) {
+                                    fetchCart();
+                              } else {
+                                    alert(data.message);
+                                    // Reset to previous value if stock validation fails
+                                    fetchCart();
+                              }
+                        });
+            }
+
+            function updateQuantityDirect(productId, newQuantity) {
+                  const quantity = parseInt(newQuantity);
+
+                  if (isNaN(quantity) || quantity <= 0) {
+                        // Reset to 1 if invalid input
+                        document.querySelector(`#cart-item-${productId} .quantity-control input`).value = 1;
+                        return;
+                  }
+
+                  fetch('pos.php', {
+                              method: 'POST',
+                              headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                              },
+                              body: `action=update_cart&product_id=${productId}&quantity=${quantity}`
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                              if (data.success) {
+                                    fetchCart();
+                              } else {
+                                    alert(data.message);
+                                    // Reset to previous value if stock validation fails
                                     fetchCart();
                               }
                         });
@@ -908,6 +1229,12 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                               if (data.success) {
                                     document.getElementById('cart-items-container').innerHTML = data.html;
                                     document.getElementById('cart-total').textContent = data.total;
+
+                                    // Update payment section
+                                    const paymentSection = document.querySelector('.payment-section');
+                                    if (paymentSection && data.payment_html) {
+                                          paymentSection.innerHTML = data.payment_html;
+                                    }
                               }
                         });
             }
