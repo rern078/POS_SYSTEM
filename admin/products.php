@@ -58,6 +58,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             switch ($_POST['action']) {
                   case 'add':
                         $product_code = trim($_POST['product_code']);
+                        $barcode = trim($_POST['barcode']);
+                        $qr_code = trim($_POST['qr_code']);
                         $name = trim($_POST['name']);
                         $description = trim($_POST['description']);
                         $price = floatval($_POST['price']);
@@ -86,8 +88,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     $image_path = $image_result;
                               }
 
-                              $stmt = $pdo->prepare("INSERT INTO products (product_code, name, description, price, discount_price, stock_quantity, category, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                              if ($stmt->execute([$product_code, $name, $description, $price, $discount_price, $stock, $category, $image_path])) {
+                              $stmt = $pdo->prepare("INSERT INTO products (product_code, barcode, qr_code, name, description, price, discount_price, stock_quantity, category, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                              if ($stmt->execute([$product_code, $barcode, $qr_code, $name, $description, $price, $discount_price, $stock, $category, $image_path])) {
                                     $message = 'Product added successfully!';
                               } else {
                                     $error = 'Failed to add product.';
@@ -98,6 +100,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   case 'update':
                         $id = intval($_POST['id']);
                         $product_code = trim($_POST['product_code']);
+                        $barcode = trim($_POST['barcode']);
+                        $qr_code = trim($_POST['qr_code']);
                         $name = trim($_POST['name']);
                         $description = trim($_POST['description']);
                         $price = floatval($_POST['price']);
@@ -128,11 +132,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                               // Build update query based on whether image is being updated
                               if ($image_path) {
-                                    $stmt = $pdo->prepare("UPDATE products SET product_code = ?, name = ?, description = ?, price = ?, discount_price = ?, stock_quantity = ?, category = ?, image_path = ? WHERE id = ?");
-                                    $params = [$product_code, $name, $description, $price, $discount_price, $stock, $category, $image_path, $id];
+                                    $stmt = $pdo->prepare("UPDATE products SET product_code = ?, barcode = ?, qr_code = ?, name = ?, description = ?, price = ?, discount_price = ?, stock_quantity = ?, category = ?, image_path = ? WHERE id = ?");
+                                    $params = [$product_code, $barcode, $qr_code, $name, $description, $price, $discount_price, $stock, $category, $image_path, $id];
                               } else {
-                                    $stmt = $pdo->prepare("UPDATE products SET product_code = ?, name = ?, description = ?, price = ?, discount_price = ?, stock_quantity = ?, category = ? WHERE id = ?");
-                                    $params = [$product_code, $name, $description, $price, $discount_price, $stock, $category, $id];
+                                    $stmt = $pdo->prepare("UPDATE products SET product_code = ?, barcode = ?, qr_code = ?, name = ?, description = ?, price = ?, discount_price = ?, stock_quantity = ?, category = ? WHERE id = ?");
+                                    $params = [$product_code, $barcode, $qr_code, $name, $description, $price, $discount_price, $stock, $category, $id];
                               }
 
                               if ($stmt->execute($params)) {
@@ -171,7 +175,9 @@ $whereConditions = [];
 $params = [];
 
 if (!empty($search)) {
-      $whereConditions[] = "(name LIKE ? OR description LIKE ? OR product_code LIKE ?)";
+      $whereConditions[] = "(name LIKE ? OR description LIKE ? OR product_code LIKE ? OR barcode LIKE ? OR qr_code LIKE ?)";
+      $params[] = "%$search%";
+      $params[] = "%$search%";
       $params[] = "%$search%";
       $params[] = "%$search%";
       $params[] = "%$search%";
@@ -371,6 +377,9 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                   <div class="card-header py-3 d-flex justify-content-between align-items-center">
                         <h6 class="m-0 font-weight-bold text-primary">Products List</h6>
                         <div>
+                              <a href="generate_qr.php" class="btn btn-success me-2">
+                                    <i class="fas fa-qrcode me-1"></i>Generate QR Codes
+                              </a>
                               <button class="btn btn-sm btn-outline-secondary" onclick="exportTable('productsTable', 'products')">
                                     <i class="fas fa-download me-1"></i>Export
                               </button>
@@ -387,6 +396,8 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                                 <th>ID</th>
                                                 <th>Image</th>
                                                 <th>Code</th>
+                                                <th>Barcode</th>
+                                                <th>QR Code</th>
                                                 <th>Name</th>
                                                 <th>Description</th>
                                                 <th>Price</th>
@@ -410,6 +421,12 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                                       </td>
                                                       <td>
                                                             <span class="badge bg-info"><?php echo htmlspecialchars($product['product_code'] ?? 'N/A'); ?></span>
+                                                      </td>
+                                                      <td>
+                                                            <span class="badge bg-secondary"><?php echo htmlspecialchars($product['barcode'] ?? 'N/A'); ?></span>
+                                                      </td>
+                                                      <td>
+                                                            <span class="badge bg-dark"><?php echo htmlspecialchars($product['qr_code'] ?? 'N/A'); ?></span>
                                                       </td>
                                                       <td><?php echo htmlspecialchars($product['name']); ?></td>
                                                       <td><?php echo htmlspecialchars(substr($product['description'], 0, 50)) . (strlen($product['description']) > 50 ? '...' : ''); ?></td>
@@ -548,14 +565,32 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                               <input type="hidden" name="action" value="add">
                               <div class="modal-body">
                                     <div class="row">
-                                          <div class="col-md-6">
+                                          <div class="col-md-4">
                                                 <div class="mb-3">
                                                       <label for="product_code" class="form-label">Product Code</label>
                                                       <input type="text" class="form-control" id="product_code" name="product_code"
                                                             placeholder="e.g., PROD001">
                                                 </div>
                                           </div>
-                                          <div class="col-md-6">
+                                          <div class="col-md-4">
+                                                <div class="mb-3">
+                                                      <label for="barcode" class="form-label">Barcode</label>
+                                                      <input type="text" class="form-control" id="barcode" name="barcode"
+                                                            placeholder="Auto-generated or manual">
+                                                      <div class="form-text">Leave empty for auto-generation</div>
+                                                </div>
+                                          </div>
+                                          <div class="col-md-4">
+                                                <div class="mb-3">
+                                                      <label for="qr_code" class="form-label">QR Code</label>
+                                                      <input type="text" class="form-control" id="qr_code" name="qr_code"
+                                                            placeholder="Auto-generated or manual">
+                                                      <div class="form-text">Leave empty for auto-generation</div>
+                                                </div>
+                                          </div>
+                                    </div>
+                                    <div class="row">
+                                          <div class="col-md-12">
                                                 <div class="mb-3">
                                                       <label for="name" class="form-label">Product Name *</label>
                                                       <input type="text" class="form-control" id="name" name="name" required>
@@ -644,13 +679,29 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                               <input type="hidden" name="id" id="edit_id">
                               <div class="modal-body">
                                     <div class="row">
-                                          <div class="col-md-6">
+                                          <div class="col-md-4">
                                                 <div class="mb-3">
                                                       <label for="edit_product_code" class="form-label">Product Code</label>
                                                       <input type="text" class="form-control" id="edit_product_code" name="product_code">
                                                 </div>
                                           </div>
-                                          <div class="col-md-6">
+                                          <div class="col-md-4">
+                                                <div class="mb-3">
+                                                      <label for="edit_barcode" class="form-label">Barcode</label>
+                                                      <input type="text" class="form-control" id="edit_barcode" name="barcode">
+                                                      <div class="form-text">Leave empty for auto-generation</div>
+                                                </div>
+                                          </div>
+                                          <div class="col-md-4">
+                                                <div class="mb-3">
+                                                      <label for="edit_qr_code" class="form-label">QR Code</label>
+                                                      <input type="text" class="form-control" id="edit_qr_code" name="qr_code">
+                                                      <div class="form-text">Leave empty for auto-generation</div>
+                                                </div>
+                                          </div>
+                                    </div>
+                                    <div class="row">
+                                          <div class="col-md-12">
                                                 <div class="mb-3">
                                                       <label for="edit_name" class="form-label">Product Name *</label>
                                                       <input type="text" class="form-control" id="edit_name" name="name" required>
@@ -748,6 +799,8 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
             function editProduct(product) {
                   document.getElementById('edit_id').value = product.id;
                   document.getElementById('edit_product_code').value = product.product_code || '';
+                  document.getElementById('edit_barcode').value = product.barcode || '';
+                  document.getElementById('edit_qr_code').value = product.qr_code || '';
                   document.getElementById('edit_name').value = product.name;
                   document.getElementById('edit_description').value = product.description;
                   document.getElementById('edit_price').value = product.price;

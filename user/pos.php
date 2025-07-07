@@ -156,6 +156,110 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   }
                   exit;
 
+            case 'clear_cart':
+                  $_SESSION['cart'] = [];
+                  echo json_encode(['success' => true, 'message' => 'Cart cleared successfully']);
+                  exit;
+
+            case 'scan_code':
+                  $code = isset($_POST['code']) ? trim($_POST['code']) : '';
+
+                  if (empty($code)) {
+                        echo json_encode(['success' => false, 'message' => 'No code provided']);
+                        exit;
+                  }
+
+                  // Search for product by barcode, QR code, or product code
+                  $stmt = $pdo->prepare("SELECT * FROM products WHERE (barcode = ? OR qr_code = ? OR product_code = ?) AND stock_quantity > 0");
+                  $stmt->execute([$code, $code, $code]);
+                  $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                  if ($product) {
+                        echo json_encode([
+                              'success' => true,
+                              'product' => $product,
+                              'message' => 'Product found: ' . $product['name']
+                        ]);
+                  } else {
+                        echo json_encode(['success' => false, 'message' => 'Product not found for code: ' . $code]);
+                  }
+                  exit;
+
+            case 'fetch_cart':
+                  ob_start();
+                  if (empty($_SESSION['cart'])) {
+                        echo '<div class="text-center mt-4 justify-content-center align-items-center d-flex flex-column w-100">
+                                    <img src="../images/placeholder-cart.png" alt="Empty Cart" style="width:120px;opacity:0.5;" class="mb-2">
+                                    <div class="text-muted">Cart is empty</div>
+                              </div>';
+                  } else {
+                        foreach ($_SESSION['cart'] as $product_id => $item) {
+                              // Get current stock for validation
+                              $stmt = $pdo->prepare("SELECT stock_quantity FROM products WHERE id = ?");
+                              $stmt->execute([$product_id]);
+                              $current_stock = $stmt->fetchColumn();
+?>
+                              <div class="cart-item" id="cart-item-<?php echo $product_id; ?>">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                          <div class="flex-grow-1">
+                                                <h6 class="mb-1"><?php echo htmlspecialchars($item['name']); ?></h6>
+                                                <p class="mb-1 text-muted">$<?php echo number_format($item['price'], 2); ?> each</p>
+                                                <div class="quantity-control">
+                                                      <button class="quantity-btn" onclick="updateQuantity(<?php echo $product_id; ?>, -1)">-</button>
+                                                      <input type="number"
+                                                            class="form-control mx-2 quantity-input"
+                                                            value="<?php echo $item['quantity']; ?>"
+                                                            min="1"
+                                                            max="<?php echo $current_stock; ?>"
+                                                            style="width: 60px; text-align: center;"
+                                                            onchange="updateQuantityDirect(<?php echo $product_id; ?>, this.value)"
+                                                            onkeypress="return event.charCode >= 48 && event.charCode <= 57">
+                                                      <button class="quantity-btn" onclick="updateQuantity(<?php echo $product_id; ?>, 1)">+</button>
+                                                </div>
+                                                <small class="text-muted">Available: <?php echo $current_stock; ?></small>
+                                          </div>
+                                          <div class="text-end">
+                                                <h6 class="mb-1">$<?php echo number_format($item['price'] * $item['quantity'], 2); ?></h6>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="removeFromCart(<?php echo $product_id; ?>)">
+                                                      <i class="fas fa-trash"></i>
+                                                </button>
+                                          </div>
+                                    </div>
+                              </div>
+                        <?php
+                        }
+                  }
+                  $cart_html = ob_get_clean();
+
+                  $total = 0;
+                  foreach ($_SESSION['cart'] as $item) {
+                        $total += $item['price'] * $item['quantity'];
+                  }
+
+                  // Generate payment section HTML
+                  ob_start();
+                  if (!empty($_SESSION['cart'])) {
+                        echo '<div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="mb-0">Total:</h5>
+                                    <h4 class="mb-0 text-primary">$' . number_format($total, 2) . '</h4>
+                              </div>
+                              <button class="btn btn-success btn-lg w-100 mb-3" onclick="showPaymentModal()">
+                                    <i class="fas fa-credit-card me-2"></i>Process Payment
+                              </button>
+                              <button class="btn btn-outline-secondary w-100" onclick="clearCart()">
+                                    <i class="fas fa-trash me-2"></i>Clear Cart
+                              </button>';
+                  }
+                  $payment_html = ob_get_clean();
+
+                  echo json_encode([
+                        'success' => true,
+                        'html' => $cart_html,
+                        'total' => '$' . number_format($total, 2),
+                        'payment_html' => $payment_html
+                  ]);
+                  exit;
+
             case 'fetch_products':
                   $search = isset($_POST['search']) ? trim($_POST['search']) : '';
                   $category = isset($_POST['category']) ? $_POST['category'] : '';
@@ -183,7 +287,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   ob_start();
                   foreach ($products as $product) {
                         $img_path = !empty($product['image_path']) ? '../' . htmlspecialchars($product['image_path']) : '../images/placeholder.jpg';
-?>
+                        ?>
                         <div class="col-lg-3 col-md-4 col-6">
                               <div class="card product-card" onclick="addToCart(<?php echo $product['id']; ?>)">
                                     <img src="<?php echo $img_path; ?>"
@@ -347,6 +451,10 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
       <!-- POS CSS -->
       <link rel="stylesheet" href="../assets/css/pos.css">
+
+      <!-- Barcode/QR Code Scanner Libraries -->
+      <script src="https://unpkg.com/@zxing/library@latest"></script>
+      <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
 </head>
 
 <body>
@@ -425,6 +533,58 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                                 <h6 class="search-title mb-3">
                                                       <i class="fas fa-search me-2"></i>Search & Filter Products
                                                 </h6>
+                                          </div>
+
+                                          <!-- Barcode/QR Code Scanner Section -->
+                                          <div class="scanner-section mb-3">
+                                                <div class="card">
+                                                      <div class="card-header bg-primary text-white">
+                                                            <h6 class="mb-0">
+                                                                  <i class="fas fa-barcode me-2"></i>Barcode/QR Code Scanner
+                                                            </h6>
+                                                      </div>
+                                                      <div class="card-body">
+                                                            <div class="row">
+                                                                  <div class="col-md-8">
+                                                                        <div class="mb-3">
+                                                                              <label for="scanner-input" class="form-label">Scan or Enter Code</label>
+                                                                              <div class="input-group">
+                                                                                    <input type="text"
+                                                                                          class="form-control"
+                                                                                          id="scanner-input"
+                                                                                          placeholder="Scan barcode or QR code..."
+                                                                                          autocomplete="off">
+                                                                                    <button class="btn btn-outline-primary" type="button" onclick="scanCode()">
+                                                                                          <i class="fas fa-camera"></i> Scan
+                                                                                    </button>
+                                                                                    <button class="btn btn-outline-success" type="button" onclick="searchByCode()">
+                                                                                          <i class="fas fa-search"></i> Search
+                                                                                    </button>
+                                                                              </div>
+                                                                        </div>
+                                                                  </div>
+                                                                  <div class="col-md-4">
+                                                                        <div class="mb-3">
+                                                                              <label class="form-label">Scanner Status</label>
+                                                                              <div class="d-flex align-items-center">
+                                                                                    <div id="scanner-status" class="badge bg-secondary me-2">Ready</div>
+                                                                                    <button class="btn btn-sm btn-outline-info" onclick="toggleScanner()">
+                                                                                          <i class="fas fa-camera"></i> Toggle Camera
+                                                                                    </button>
+                                                                              </div>
+                                                                        </div>
+                                                                  </div>
+                                                            </div>
+                                                            <div id="scanner-video-container" class="text-center" style="display: none;">
+                                                                  <video id="scanner-video" width="100%" height="200" style="border: 1px solid #ddd; border-radius: 8px;"></video>
+                                                                  <div class="mt-2">
+                                                                        <button class="btn btn-sm btn-danger" onclick="stopScanner()">
+                                                                              <i class="fas fa-stop"></i> Stop Scanner
+                                                                        </button>
+                                                                  </div>
+                                                            </div>
+                                                      </div>
+                                                </div>
                                           </div>
                                           <div class="search-controls">
                                                 <div class="search-row">
@@ -861,6 +1021,222 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                               }
                         });
             }
+
+            // Barcode/QR Code Scanner Functions
+            let scanner = null;
+            let isScanning = false;
+
+            function scanCode() {
+                  const code = document.getElementById('scanner-input').value.trim();
+                  if (code) {
+                        searchByCode();
+                  } else {
+                        toggleScanner();
+                  }
+            }
+
+            function searchByCode() {
+                  const code = document.getElementById('scanner-input').value.trim();
+                  if (!code) {
+                        alert('Please enter a code to search');
+                        return;
+                  }
+
+                  updateScannerStatus('Searching...', 'info');
+
+                  fetch('pos.php', {
+                              method: 'POST',
+                              headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded'
+                              },
+                              body: `action=scan_code&code=${encodeURIComponent(code)}`
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                              if (data.success) {
+                                    updateScannerStatus('Product found!', 'success');
+                                    // Add product to cart
+                                    addToCart(data.product.id);
+                                    // Clear scanner input
+                                    document.getElementById('scanner-input').value = '';
+                                    // Show success message
+                                    showNotification(data.message, 'success');
+                              } else {
+                                    updateScannerStatus('Product not found', 'danger');
+                                    showNotification(data.message, 'error');
+                              }
+                        })
+                        .catch(error => {
+                              updateScannerStatus('Error', 'danger');
+                              showNotification('Error searching for product', 'error');
+                        });
+            }
+
+            function toggleScanner() {
+                  if (isScanning) {
+                        stopScanner();
+                  } else {
+                        startScanner();
+                  }
+            }
+
+            function startScanner() {
+                  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                        alert('Camera access is not supported in this browser');
+                        return;
+                  }
+
+                  updateScannerStatus('Starting...', 'warning');
+
+                  // Try ZXing first (better for QR codes)
+                  if (typeof ZXing !== 'undefined') {
+                        startZXingScanner();
+                  } else {
+                        // Fallback to Quagga for barcodes
+                        startQuaggaScanner();
+                  }
+            }
+
+            function startZXingScanner() {
+                  const video = document.getElementById('scanner-video');
+                  const container = document.getElementById('scanner-video-container');
+
+                  navigator.mediaDevices.getUserMedia({
+                              video: {
+                                    facingMode: 'environment'
+                              }
+                        })
+                        .then(stream => {
+                              video.srcObject = stream;
+                              video.play();
+
+                              container.style.display = 'block';
+                              isScanning = true;
+                              updateScannerStatus('Scanning...', 'success');
+
+                              // Initialize ZXing
+                              const codeReader = new ZXing.BrowserMultiFormatReader();
+                              codeReader.decodeFromVideoDevice(null, 'scanner-video', (result, err) => {
+                                    if (result) {
+                                          console.log('Scanned:', result.text);
+                                          document.getElementById('scanner-input').value = result.text;
+                                          searchByCode();
+                                          stopScanner();
+                                    }
+                                    if (err && !(err instanceof ZXing.NotFoundException)) {
+                                          console.error('Scanning error:', err);
+                                    }
+                              });
+                        })
+                        .catch(error => {
+                              console.error('Camera access error:', error);
+                              updateScannerStatus('Camera access denied', 'danger');
+                              alert('Unable to access camera. Please check permissions.');
+                        });
+            }
+
+            function startQuaggaScanner() {
+                  const container = document.getElementById('scanner-video-container');
+                  container.style.display = 'block';
+
+                  Quagga.init({
+                        inputStream: {
+                              name: "Live",
+                              type: "LiveStream",
+                              target: container,
+                              constraints: {
+                                    facingMode: "environment"
+                              },
+                        },
+                        decoder: {
+                              readers: [
+                                    "code_128_reader",
+                                    "ean_reader",
+                                    "ean_8_reader",
+                                    "code_39_reader",
+                                    "code_39_vin_reader",
+                                    "codabar_reader",
+                                    "upc_reader",
+                                    "upc_e_reader",
+                                    "i2of5_reader"
+                              ]
+                        }
+                  }, function(err) {
+                        if (err) {
+                              console.error('Quagga initialization error:', err);
+                              updateScannerStatus('Scanner error', 'danger');
+                              return;
+                        }
+
+                        isScanning = true;
+                        updateScannerStatus('Scanning...', 'success');
+                        Quagga.start();
+
+                        Quagga.onDetected(function(result) {
+                              console.log('Scanned:', result.codeResult.code);
+                              document.getElementById('scanner-input').value = result.codeResult.code;
+                              searchByCode();
+                              stopScanner();
+                        });
+                  });
+            }
+
+            function stopScanner() {
+                  const video = document.getElementById('scanner-video');
+                  const container = document.getElementById('scanner-video-container');
+
+                  if (video.srcObject) {
+                        const tracks = video.srcObject.getTracks();
+                        tracks.forEach(track => track.stop());
+                        video.srcObject = null;
+                  }
+
+                  if (typeof Quagga !== 'undefined') {
+                        Quagga.stop();
+                  }
+
+                  container.style.display = 'none';
+                  isScanning = false;
+                  updateScannerStatus('Ready', 'secondary');
+            }
+
+            function updateScannerStatus(message, type) {
+                  const statusElement = document.getElementById('scanner-status');
+                  statusElement.textContent = message;
+                  statusElement.className = `badge bg-${type} me-2`;
+            }
+
+            function showNotification(message, type) {
+                  // Create notification element
+                  const notification = document.createElement('div');
+                  notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+                  notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+                  notification.innerHTML = `
+                        ${message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                  `;
+
+                  document.body.appendChild(notification);
+
+                  // Auto remove after 3 seconds
+                  setTimeout(() => {
+                        if (notification.parentNode) {
+                              notification.remove();
+                        }
+                  }, 3000);
+            }
+
+            // Handle scanner input enter key
+            document.addEventListener('DOMContentLoaded', function() {
+                  const scannerInput = document.getElementById('scanner-input');
+                  if (scannerInput) {
+                        scannerInput.addEventListener('keypress', function(e) {
+                              if (e.key === 'Enter') {
+                                    searchByCode();
+                              }
+                        });
+                  }
+            });
       </script>
 </body>
 
