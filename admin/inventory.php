@@ -9,124 +9,188 @@ if (!isLoggedIn() || !isAdmin()) {
       exit();
 }
 
-// Get inventory data
 $pdo = getDBConnection();
+$message = '';
+$error = '';
+
+// Handle inventory operations
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+      if (isset($_POST['action'])) {
+            switch ($_POST['action']) {
+                  case 'update_stock':
+                        $product_id = intval($_POST['product_id']);
+                        $new_quantity = intval($_POST['new_quantity']);
+                        $adjustment_type = $_POST['adjustment_type'];
+                        $notes = trim($_POST['notes']);
+
+                        if ($new_quantity < 0) {
+                              $error = 'Stock quantity cannot be negative.';
+                        } else {
+                              // Get current stock
+                              $stmt = $pdo->prepare("SELECT stock_quantity, name FROM products WHERE id = ?");
+                              $stmt->execute([$product_id]);
+                              $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                              if ($product) {
+                                    // Update stock
+                                    $stmt = $pdo->prepare("UPDATE products SET stock_quantity = ? WHERE id = ?");
+                                    if ($stmt->execute([$new_quantity, $product_id])) {
+                                          // Log the adjustment (try to insert, but don't fail if table doesn't exist)
+                                          try {
+                                                $stmt = $pdo->prepare("INSERT INTO inventory_adjustments (product_id, adjustment_type, old_quantity, new_quantity, notes, adjusted_by) VALUES (?, ?, ?, ?, ?, ?)");
+                                                $stmt->execute([$product_id, $adjustment_type, $product['stock_quantity'], $new_quantity, $notes, $_SESSION['user_id']]);
+                                          } catch (PDOException $e) {
+                                                // Table might not exist yet, but stock update was successful
+                                                // This is not a critical error
+                                          }
+
+                                          $message = 'Stock updated successfully!';
+                                    } else {
+                                          $error = 'Failed to update stock.';
+                                    }
+                              } else {
+                                    $error = 'Product not found.';
+                              }
+                        }
+                        break;
+
+                  case 'bulk_update':
+                        $product_ids = $_POST['product_ids'] ?? [];
+                        $adjustment_type = $_POST['bulk_adjustment_type'];
+                        $adjustment_value = intval($_POST['bulk_adjustment_value']);
+                        $bulk_notes = trim($_POST['bulk_notes']);
+
+                        if (empty($product_ids)) {
+                              $error = 'Please select at least one product.';
+                        } else {
+                              $success_count = 0;
+                              foreach ($product_ids as $product_id) {
+                                    $product_id = intval($product_id);
+
+                                    // Get current stock
+                                    $stmt = $pdo->prepare("SELECT stock_quantity FROM products WHERE id = ?");
+                                    $stmt->execute([$product_id]);
+                                    $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                                    if ($product) {
+                                          $old_quantity = $product['stock_quantity'];
+                                          $new_quantity = $adjustment_type === 'add' ? $old_quantity + $adjustment_value : $old_quantity - $adjustment_value;
+
+                                          if ($new_quantity >= 0) {
+                                                // Update stock
+                                                $stmt = $pdo->prepare("UPDATE products SET stock_quantity = ? WHERE id = ?");
+                                                if ($stmt->execute([$new_quantity, $product_id])) {
+                                                      // Log the adjustment (try to insert, but don't fail if table doesn't exist)
+                                                      try {
+                                                            $stmt = $pdo->prepare("INSERT INTO inventory_adjustments (product_id, adjustment_type, old_quantity, new_quantity, notes, adjusted_by) VALUES (?, ?, ?, ?, ?, ?)");
+                                                            $stmt->execute([$product_id, $adjustment_type, $old_quantity, $new_quantity, $bulk_notes, $_SESSION['user_id']]);
+                                                      } catch (PDOException $e) {
+                                                            // Table might not exist yet, but stock update was successful
+                                                            // This is not a critical error
+                                                      }
+
+                                                      $success_count++;
+                                                }
+                                          }
+                                    }
+                              }
+
+                              if ($success_count > 0) {
+                                    $message = "Successfully updated stock for $success_count product(s)!";
+                              } else {
+                                    $error = 'Failed to update any products.';
+                              }
+                        }
+                        break;
+            }
+      }
+}
+
+// Get inventory data with search and filter
+$search = $_GET['search'] ?? '';
+$category = $_GET['category'] ?? '';
+$stock_status = $_GET['stock_status'] ?? '';
+$sort = $_GET['sort'] ?? 'name';
+$order = $_GET['order'] ?? 'ASC';
 
 // Pagination settings
-$items_per_page = 10; // Number of items per page
-$current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$current_page = max(1, $current_page); // Ensure page is at least 1
+$items_per_page = 15;
+$current_page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 $offset = ($current_page - 1) * $items_per_page;
 
-// Get total number of products for pagination
-$stmt = $pdo->prepare("SELECT COUNT(*) as total FROM products");
-$stmt->execute();
-$total_products = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-$total_pages = ceil($total_products / $items_per_page);
+$whereConditions = [];
+$params = [];
+
+if (!empty($search)) {
+      $whereConditions[] = "(p.name LIKE ? OR p.product_code LIKE ? OR p.barcode LIKE ?)";
+      $params[] = "%$search%";
+      $params[] = "%$search%";
+      $params[] = "%$search%";
+}
+
+if (!empty($category)) {
+      $whereConditions[] = "p.category = ?";
+      $params[] = $category;
+}
+
+if (!empty($stock_status)) {
+      switch ($stock_status) {
+            case 'in_stock':
+                  $whereConditions[] = "p.stock_quantity > 0";
+                  break;
+            case 'out_of_stock':
+                  $whereConditions[] = "p.stock_quantity = 0";
+                  break;
+            case 'low_stock':
+                  $whereConditions[] = "p.stock_quantity BETWEEN 1 AND 10";
+                  break;
+            case 'critical':
+                  $whereConditions[] = "p.stock_quantity <= 5";
+                  break;
+      }
+}
+
+$whereClause = !empty($whereConditions) ? 'WHERE ' . implode(' AND ', $whereConditions) : '';
+
+// Get total count for pagination
+$countSql = "SELECT COUNT(*) FROM products p $whereClause";
+$countStmt = $pdo->prepare($countSql);
+$countStmt->execute($params);
+$total_items = $countStmt->fetchColumn();
+$total_pages = ceil($total_items / $items_per_page);
+
+// Get paginated inventory
+$sql = "SELECT p.*, 
+              COALESCE(SUM(oi.quantity), 0) as total_sold,
+              p.created_at as last_updated
+        FROM products p 
+        LEFT JOIN order_items oi ON p.id = oi.product_id 
+        $whereClause 
+        GROUP BY p.id 
+        ORDER BY $sort $order 
+        LIMIT $items_per_page OFFSET $offset";
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$inventory = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Get categories for filter dropdown
+$categories = [];
+$catStmt = $pdo->query("SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != '' ORDER BY category");
+while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
+      $categories[] = $row['category'];
+}
 
 // Get inventory statistics
 $stmt = $pdo->prepare("SELECT 
     COUNT(*) as total_products,
     SUM(stock_quantity) as total_stock,
     COUNT(CASE WHEN stock_quantity = 0 THEN 1 END) as out_of_stock,
-    COUNT(CASE WHEN stock_quantity < 10 THEN 1 END) as low_stock,
+    COUNT(CASE WHEN stock_quantity BETWEEN 1 AND 10 THEN 1 END) as low_stock,
+    COUNT(CASE WHEN stock_quantity <= 5 THEN 1 END) as critical_stock,
     AVG(stock_quantity) as avg_stock
 FROM products");
 $stmt->execute();
-$inventory_stats = $stmt->fetch(PDO::FETCH_ASSOC);
-
-// Get low stock products
-$stmt = $pdo->prepare("
-    SELECT * FROM products 
-    WHERE stock_quantity < 10 
-    ORDER BY stock_quantity ASC 
-    LIMIT 10
-");
-$stmt->execute();
-$low_stock_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Get out of stock products
-$stmt = $pdo->prepare("
-    SELECT * FROM products 
-    WHERE stock_quantity = 0 
-    ORDER BY name ASC
-");
-$stmt->execute();
-$out_of_stock_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Get paginated products for inventory table
-$stmt = $pdo->prepare("
-    SELECT * FROM products 
-    ORDER BY stock_quantity ASC, name ASC
-    LIMIT :limit OFFSET :offset
-");
-$stmt->bindValue(':limit', $items_per_page, PDO::PARAM_INT);
-$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-$stmt->execute();
-$all_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Get stock by category
-$stmt = $pdo->prepare("
-    SELECT category, COUNT(*) as product_count, SUM(stock_quantity) as total_stock
-    FROM products
-    GROUP BY category
-    ORDER BY total_stock ASC
-");
-$stmt->execute();
-$stock_by_category = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Function to generate pagination links
-function generatePaginationLinks($current_page, $total_pages, $base_url = 'inventory.php')
-{
-      $links = '';
-
-      // Previous button
-      if ($current_page > 1) {
-            $prev_page = $current_page - 1;
-            $links .= '<li class="page-item"><a class="page-link" href="' . $base_url . '?page=' . $prev_page . '"><i class="fas fa-chevron-left"></i></a></li>';
-      } else {
-            $links .= '<li class="page-item disabled"><span class="page-link"><i class="fas fa-chevron-left"></i></span></li>';
-      }
-
-      // Page numbers
-      $start_page = max(1, $current_page - 2);
-      $end_page = min($total_pages, $current_page + 2);
-
-      // Show first page if not in range
-      if ($start_page > 1) {
-            $links .= '<li class="page-item"><a class="page-link" href="' . $base_url . '?page=1">1</a></li>';
-            if ($start_page > 2) {
-                  $links .= '<li class="page-item disabled"><span class="page-link">...</span></li>';
-            }
-      }
-
-      // Show page numbers in range
-      for ($i = $start_page; $i <= $end_page; $i++) {
-            if ($i == $current_page) {
-                  $links .= '<li class="page-item active"><span class="page-link">' . $i . '</span></li>';
-            } else {
-                  $links .= '<li class="page-item"><a class="page-link" href="' . $base_url . '?page=' . $i . '">' . $i . '</a></li>';
-            }
-      }
-
-      // Show last page if not in range
-      if ($end_page < $total_pages) {
-            if ($end_page < $total_pages - 1) {
-                  $links .= '<li class="page-item disabled"><span class="page-link">...</span></li>';
-            }
-            $links .= '<li class="page-item"><a class="page-link" href="' . $base_url . '?page=' . $total_pages . '">' . $total_pages . '</a></li>';
-      }
-
-      // Next button
-      if ($current_page < $total_pages) {
-            $next_page = $current_page + 1;
-            $links .= '<li class="page-item"><a class="page-link" href="' . $base_url . '?page=' . $next_page . '"><i class="fas fa-chevron-right"></i></a></li>';
-      } else {
-            $links .= '<li class="page-item disabled"><span class="page-link"><i class="fas fa-chevron-right"></i></span></li>';
-      }
-
-      return $links;
-}
+$stats = $stmt->fetch(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -135,338 +199,319 @@ function generatePaginationLinks($current_page, $total_pages, $base_url = 'inven
 <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Inventory Management - POS System</title>
+      <title>Inventory Management - POS Admin</title>
 
       <!-- Bootstrap 5 CSS -->
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
       <!-- Font Awesome -->
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+      <!-- Google Fonts -->
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
       <!-- Custom CSS -->
       <link rel="stylesheet" href="assets/css/admin.css">
-      <!-- Chart.js -->
-      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
-      <!-- Navigation -->
-      <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-            <div class="container-fluid">
-                  <a class="navbar-brand" href="index.php">
-                        <i class="fas fa-store me-2"></i>POS Admin
-                  </a>
+      <div class="admin-layout">
+            <?php include 'side.php'; ?>
 
-                  <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                        <span class="navbar-toggler-icon"></span>
-                  </button>
+            <!-- Main Content Wrapper -->
+            <div class="admin-main">
+                  <!-- Top Navigation Bar -->
+                  <nav class="admin-topbar">
+                        <div class="topbar-left">
+                              <button class="btn btn-link sidebar-toggle-btn" id="sidebarToggleBtn">
+                                    <i class="fas fa-bars"></i>
+                              </button>
+                              <div class="breadcrumb-container">
+                                    <nav aria-label="breadcrumb">
+                                          <ol class="breadcrumb">
+                                                <li class="breadcrumb-item"><a href="index.php">Home</a></li>
+                                                <li class="breadcrumb-item active" aria-current="page">Inventory</li>
+                                          </ol>
+                                    </nav>
+                              </div>
+                        </div>
+                        <div class="topbar-right">
+                              <div class="topbar-actions">
+                                    <div class="dropdown">
+                                          <button class="btn btn-link notification-btn" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-bell"></i>
+                                                <span class="notification-badge">3</span>
+                                          </button>
+                                          <ul class="dropdown-menu dropdown-menu-end notification-menu" aria-labelledby="notificationDropdown">
+                                                <li>
+                                                      <h6 class="dropdown-header">Notifications</h6>
+                                                </li>
+                                                <li><a class="dropdown-item" href="#"><i class="fas fa-exclamation-circle text-warning me-2"></i>Low stock alert</a></li>
+                                                <li><a class="dropdown-item" href="#"><i class="fas fa-check-circle text-success me-2"></i>Order completed</a></li>
+                                                <li><a class="dropdown-item" href="#"><i class="fas fa-info-circle text-info me-2"></i>New user registered</a></li>
+                                                <li>
+                                                      <hr class="dropdown-divider">
+                                                </li>
+                                                <li><a class="dropdown-item text-center" href="#">View all notifications</a></li>
+                                          </ul>
+                                    </div>
+                              </div>
+                        </div>
+                  </nav>
 
-                  <div class="collapse navbar-collapse" id="navbarNav">
-                        <ul class="navbar-nav me-auto">
-                              <li class="nav-item">
-                                    <a class="nav-link" href="index.php">
-                                          <i class="fas fa-tachometer-alt me-1"></i>Dashboard
-                                    </a>
-                              </li>
-                              <li class="nav-item">
-                                    <a class="nav-link" href="products.php">
-                                          <i class="fas fa-box me-1"></i>Products
-                                    </a>
-                              </li>
-                              <li class="nav-item">
-                                    <a class="nav-link" href="sales.php">
-                                          <i class="fas fa-chart-line me-1"></i>Sales
-                                    </a>
-                              </li>
-                              <li class="nav-item">
-                                    <a class="nav-link active" href="inventory.php">
-                                          <i class="fas fa-warehouse me-1"></i>Inventory
-                                    </a>
-                              </li>
-                              <li class="nav-item">
-                                    <a class="nav-link" href="users.php">
-                                          <i class="fas fa-users me-1"></i>Users
-                                    </a>
-                              </li>
-                              <li class="nav-item">
-                                    <a class="nav-link" href="reports.php">
-                                          <i class="fas fa-file-alt me-1"></i>Reports
-                                    </a>
-                              </li>
-                        </ul>
-
-                        <ul class="navbar-nav">
-                              <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                                          <i class="fas fa-user-circle me-1"></i><?php echo $_SESSION['username']; ?>
-                                    </a>
-                                    <ul class="dropdown-menu">
-                                          <li><a class="dropdown-item" href="profile.php"><i class="fas fa-user me-2"></i>Profile</a></li>
-                                          <li><a class="dropdown-item" href="settings.php"><i class="fas fa-cog me-2"></i>Settings</a></li>
-                                          <li>
-                                                <hr class="dropdown-divider">
-                                          </li>
-                                          <li><a class="dropdown-item" href="logout.php"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-                                    </ul>
-                              </li>
-                        </ul>
-                  </div>
-            </div>
-      </nav>
-
-      <!-- Main Content -->
-      <div class="container-fluid mt-4">
-            <!-- Page Header -->
-            <div class="row mb-4">
-                  <div class="col-12">
-                        <h1 class="h3 mb-0 text-gray-800">Inventory Management</h1>
-                        <p class="text-muted">Monitor and manage your product inventory</p>
-                  </div>
-            </div>
-
-            <!-- Inventory Statistics Cards -->
-            <div class="row mb-4">
-                  <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card border-left-primary shadow h-100 py-2">
-                              <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                          <div class="col mr-2">
-                                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                                      Total Products
-                                                </div>
-                                                <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                                      <?php echo $inventory_stats['total_products']; ?>
-                                                </div>
+                  <!-- Page Content -->
+                  <div class="admin-content">
+                        <!-- Page Header -->
+                        <div class="content-card">
+                              <div class="content-card-header">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                          <div>
+                                                <h1 class="content-card-title">
+                                                      <i class="fas fa-warehouse"></i>
+                                                      Inventory Management
+                                                </h1>
+                                                <p class="text-muted mb-0">Monitor and manage your product inventory levels.</p>
                                           </div>
-                                          <div class="col-auto">
-                                                <i class="fas fa-box fa-2x text-gray-300"></i>
+                                          <div>
+                                                <button class="btn btn-modern btn-warning me-2" data-bs-toggle="modal" data-bs-target="#bulkUpdateModal">
+                                                      <i class="fas fa-edit me-2"></i>Bulk Update
+                                                </button>
+                                                <button class="btn btn-modern btn-primary" onclick="exportInventory()">
+                                                      <i class="fas fa-download me-2"></i>Export
+                                                </button>
                                           </div>
                                     </div>
                               </div>
                         </div>
-                  </div>
 
-                  <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card border-left-success shadow h-100 py-2">
-                              <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                          <div class="col mr-2">
-                                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                                      Total Stock
-                                                </div>
-                                                <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                                      <?php echo number_format($inventory_stats['total_stock']); ?>
+                        <!-- Messages -->
+                        <?php if ($message): ?>
+                              <div class="alert alert-modern alert-success alert-dismissible fade show" role="alert">
+                                    <i class="fas fa-check-circle me-2"></i><?php echo htmlspecialchars($message); ?>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                              </div>
+                        <?php endif; ?>
+
+                        <?php if ($error): ?>
+                              <div class="alert alert-modern alert-danger alert-dismissible fade show" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-2"></i><?php echo htmlspecialchars($error); ?>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                              </div>
+                        <?php endif; ?>
+
+                        <!-- Inventory Statistics -->
+                        <div class="row mb-4">
+                              <div class="col-xl-3 col-md-6 mb-4">
+                                    <div class="stat-card">
+                                          <div class="stat-card-header">
+                                                <h6 class="stat-card-title">Total Products</h6>
+                                                <div class="stat-card-icon">
+                                                      <i class="fas fa-box"></i>
                                                 </div>
                                           </div>
-                                          <div class="col-auto">
-                                                <i class="fas fa-warehouse fa-2x text-gray-300"></i>
+                                          <h2 class="stat-card-value"><?php echo number_format($stats['total_products']); ?></h2>
+                                          <div class="stat-card-change positive">
+                                                <i class="fas fa-arrow-up"></i> Active inventory
+                                          </div>
+                                    </div>
+                              </div>
+
+                              <div class="col-xl-3 col-md-6 mb-4">
+                                    <div class="stat-card success">
+                                          <div class="stat-card-header">
+                                                <h6 class="stat-card-title">Total Stock</h6>
+                                                <div class="stat-card-icon">
+                                                      <i class="fas fa-cubes"></i>
+                                                </div>
+                                          </div>
+                                          <h2 class="stat-card-value"><?php echo number_format($stats['total_stock']); ?></h2>
+                                          <div class="stat-card-change positive">
+                                                <i class="fas fa-arrow-up"></i> Units available
+                                          </div>
+                                    </div>
+                              </div>
+
+                              <div class="col-xl-3 col-md-6 mb-4">
+                                    <div class="stat-card warning">
+                                          <div class="stat-card-header">
+                                                <h6 class="stat-card-title">Low Stock Items</h6>
+                                                <div class="stat-card-icon">
+                                                      <i class="fas fa-exclamation-triangle"></i>
+                                                </div>
+                                          </div>
+                                          <h2 class="stat-card-value"><?php echo number_format($stats['low_stock']); ?></h2>
+                                          <div class="stat-card-change negative">
+                                                <i class="fas fa-arrow-down"></i> Need attention
+                                          </div>
+                                    </div>
+                              </div>
+
+                              <div class="col-xl-3 col-md-6 mb-4">
+                                    <div class="stat-card danger">
+                                          <div class="stat-card-header">
+                                                <h6 class="stat-card-title">Out of Stock</h6>
+                                                <div class="stat-card-icon">
+                                                      <i class="fas fa-times-circle"></i>
+                                                </div>
+                                          </div>
+                                          <h2 class="stat-card-value"><?php echo number_format($stats['out_of_stock']); ?></h2>
+                                          <div class="stat-card-change negative">
+                                                <i class="fas fa-arrow-down"></i> Need restocking
                                           </div>
                                     </div>
                               </div>
                         </div>
-                  </div>
 
-                  <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card border-left-warning shadow h-100 py-2">
-                              <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                          <div class="col mr-2">
-                                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                                      Low Stock Items
-                                                </div>
-                                                <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                                      <?php echo $inventory_stats['low_stock']; ?>
-                                                </div>
+                        <!-- Filters and Search -->
+                        <div class="content-card">
+                              <div class="content-card-header">
+                                    <h6 class="content-card-title">
+                                          <i class="fas fa-filter"></i>
+                                          Filters & Search
+                                    </h6>
+                              </div>
+                              <div class="content-card-body">
+                                    <form method="GET" class="row g-3 form-modern">
+                                          <div class="col-md-3">
+                                                <label for="search" class="form-label">Search Products</label>
+                                                <input type="text" class="form-control" id="search" name="search"
+                                                      placeholder="Search by name, code, or barcode..."
+                                                      value="<?php echo htmlspecialchars($search); ?>">
                                           </div>
-                                          <div class="col-auto">
-                                                <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                                          <div class="col-md-2">
+                                                <label for="category" class="form-label">Category</label>
+                                                <select class="form-select" id="category" name="category">
+                                                      <option value="">All Categories</option>
+                                                      <?php foreach ($categories as $cat): ?>
+                                                            <option value="<?php echo htmlspecialchars($cat); ?>"
+                                                                  <?php echo $category === $cat ? 'selected' : ''; ?>>
+                                                                  <?php echo htmlspecialchars($cat); ?>
+                                                            </option>
+                                                      <?php endforeach; ?>
+                                                </select>
                                           </div>
-                                    </div>
+                                          <div class="col-md-2">
+                                                <label for="stock_status" class="form-label">Stock Status</label>
+                                                <select class="form-select" id="stock_status" name="stock_status">
+                                                      <option value="">All Status</option>
+                                                      <option value="in_stock" <?php echo $stock_status === 'in_stock' ? 'selected' : ''; ?>>In Stock</option>
+                                                      <option value="low_stock" <?php echo $stock_status === 'low_stock' ? 'selected' : ''; ?>>Low Stock</option>
+                                                      <option value="critical" <?php echo $stock_status === 'critical' ? 'selected' : ''; ?>>Critical</option>
+                                                      <option value="out_of_stock" <?php echo $stock_status === 'out_of_stock' ? 'selected' : ''; ?>>Out of Stock</option>
+                                                </select>
+                                          </div>
+                                          <div class="col-md-2">
+                                                <label for="sort" class="form-label">Sort By</label>
+                                                <select class="form-select" id="sort" name="sort">
+                                                      <option value="name" <?php echo $sort === 'name' ? 'selected' : ''; ?>>Name</option>
+                                                      <option value="stock_quantity" <?php echo $sort === 'stock_quantity' ? 'selected' : ''; ?>>Stock</option>
+                                                      <option value="category" <?php echo $sort === 'category' ? 'selected' : ''; ?>>Category</option>
+                                                      <option value="last_updated" <?php echo $sort === 'last_updated' ? 'selected' : ''; ?>>Last Updated</option>
+                                                </select>
+                                          </div>
+                                          <div class="col-md-2">
+                                                <label for="order" class="form-label">Order</label>
+                                                <select class="form-select" id="order" name="order">
+                                                      <option value="ASC" <?php echo $order === 'ASC' ? 'selected' : ''; ?>>Ascending</option>
+                                                      <option value="DESC" <?php echo $order === 'DESC' ? 'selected' : ''; ?>>Descending</option>
+                                                </select>
+                                          </div>
+                                          <div class="col-md-1">
+                                                <label class="form-label">&nbsp;</label>
+                                                <button type="submit" class="btn btn-modern btn-primary w-100">
+                                                      <i class="fas fa-search"></i>
+                                                </button>
+                                          </div>
+                                    </form>
                               </div>
                         </div>
-                  </div>
 
-                  <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card border-left-danger shadow h-100 py-2">
-                              <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                          <div class="col mr-2">
-                                                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                                                      Out of Stock
-                                                </div>
-                                                <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                                      <?php echo $inventory_stats['out_of_stock']; ?>
-                                                </div>
-                                          </div>
-                                          <div class="col-auto">
-                                                <i class="fas fa-times-circle fa-2x text-gray-300"></i>
-                                          </div>
-                                    </div>
-                              </div>
-                        </div>
-                  </div>
-            </div>
-
-            <!-- Charts Row -->
-            <div class="row mb-4">
-                  <!-- Stock by Category Chart -->
-                  <div class="col-xl-8 col-lg-7">
-                        <div class="card shadow mb-4">
-                              <div class="card-header py-3">
-                                    <h6 class="m-0 font-weight-bold text-primary">Stock by Category</h6>
-                              </div>
-                              <div class="card-body">
-                                    <div class="chart-area">
-                                          <canvas id="categoryChart"></canvas>
-                                    </div>
-                              </div>
-                        </div>
-                  </div>
-
-                  <!-- Stock Status Chart -->
-                  <div class="col-xl-4 col-lg-5">
-                        <div class="card shadow mb-4">
-                              <div class="card-header py-3">
-                                    <h6 class="m-0 font-weight-bold text-primary">Stock Status</h6>
-                              </div>
-                              <div class="card-body">
-                                    <div class="chart-pie pt-4 pb-2">
-                                          <canvas id="stockStatusChart"></canvas>
-                                    </div>
-                              </div>
-                        </div>
-                  </div>
-            </div>
-
-            <!-- Low Stock Alerts -->
-            <?php if (!empty($low_stock_products)): ?>
-                  <div class="row mb-4">
-                        <div class="col-12">
-                              <div class="card shadow mb-4 border-left-warning">
-                                    <div class="card-header py-3">
-                                          <h6 class="m-0 font-weight-bold text-warning">
-                                                <i class="fas fa-exclamation-triangle me-2"></i>Low Stock Alerts
+                        <!-- Inventory Table -->
+                        <div class="content-card">
+                              <div class="content-card-header">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                          <h6 class="content-card-title">
+                                                <i class="fas fa-list"></i>
+                                                Inventory List
                                           </h6>
-                                    </div>
-                                    <div class="card-body">
-                                          <div class="table-responsive">
-                                                <table class="table table-bordered">
-                                                      <thead>
-                                                            <tr>
-                                                                  <th>Product</th>
-                                                                  <th>Category</th>
-                                                                  <th>Current Stock</th>
-                                                                  <th>Price</th>
-                                                                  <th>Actions</th>
-                                                            </tr>
-                                                      </thead>
-                                                      <tbody>
-                                                            <?php foreach ($low_stock_products as $product): ?>
-                                                                  <tr>
-                                                                        <td>
-                                                                              <div class="d-flex align-items-center">
-                                                                                    <?php if ($product['image_path']): ?>
-                                                                                          <img src="../<?php echo $product['image_path']; ?>"
-                                                                                                alt="<?php echo htmlspecialchars($product['name']); ?>"
-                                                                                                class="me-2" style="width: 40px; height: 40px; object-fit: cover;">
-                                                                                    <?php endif; ?>
-                                                                                    <div>
-                                                                                          <strong><?php echo htmlspecialchars($product['name']); ?></strong>
-                                                                                          <br><small class="text-muted"><?php echo $product['product_code']; ?></small>
-                                                                                    </div>
-                                                                              </div>
-                                                                        </td>
-                                                                        <td><?php echo htmlspecialchars($product['category']); ?></td>
-                                                                        <td>
-                                                                              <span class="badge bg-warning">
-                                                                                    <?php echo $product['stock_quantity']; ?> units
-                                                                              </span>
-                                                                        </td>
-                                                                        <td>$<?php echo number_format($product['price'], 2); ?></td>
-                                                                        <td>
-                                                                              <a href="products.php?edit=<?php echo $product['id']; ?>" class="btn btn-sm btn-warning">
-                                                                                    <i class="fas fa-edit"></i> Update Stock
-                                                                              </a>
-                                                                        </td>
-                                                                  </tr>
-                                                            <?php endforeach; ?>
-                                                      </tbody>
-                                                </table>
+                                          <div>
+                                                <button class="btn btn-modern btn-outline-secondary me-2" onclick="printPage()">
+                                                      <i class="fas fa-print me-1"></i>Print
+                                                </button>
+                                                <button class="btn btn-modern btn-outline-secondary" onclick="exportTable('inventoryTable', 'inventory')">
+                                                      <i class="fas fa-download me-1"></i>Export Table
+                                                </button>
                                           </div>
                                     </div>
                               </div>
-                        </div>
-                  </div>
-            <?php endif; ?>
-
-            <!-- Complete Inventory Table -->
-            <div class="row">
-                  <div class="col-12">
-                        <div class="card shadow mb-4">
-                              <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                                    <h6 class="m-0 font-weight-bold text-primary">Complete Inventory</h6>
-                                    <a href="products.php" class="btn btn-primary btn-sm">
-                                          <i class="fas fa-plus me-1"></i>Add Product
-                                    </a>
-                              </div>
-                              <div class="card-body">
+                              <div class="content-card-body">
                                     <div class="table-responsive">
-                                          <table class="table table-bordered" id="inventoryTable" width="100%" cellspacing="0">
+                                          <table class="table table-modern" id="inventoryTable" width="100%" cellspacing="0">
                                                 <thead>
                                                       <tr>
+                                                            <th>
+                                                                  <input type="checkbox" id="selectAll" class="form-check-input">
+                                                            </th>
                                                             <th>Product</th>
+                                                            <th>Code</th>
                                                             <th>Category</th>
-                                                            <th>Stock Level</th>
-                                                            <th>Price</th>
+                                                            <th>Current Stock</th>
                                                             <th>Status</th>
+                                                            <th>Total Sold</th>
                                                             <th>Last Updated</th>
                                                             <th>Actions</th>
                                                       </tr>
                                                 </thead>
                                                 <tbody>
-                                                      <?php foreach ($all_products as $product): ?>
+                                                      <?php foreach ($inventory as $item):
+                                                            $img_path = !empty($item['image_path']) ? '../' . htmlspecialchars($item['image_path']) : '../images/placeholder.jpg';
+                                                            $stock_status_class = $item['stock_quantity'] == 0 ? 'danger' : ($item['stock_quantity'] <= 5 ? 'warning' : ($item['stock_quantity'] <= 10 ? 'info' : 'success'));
+                                                            $stock_status_text = $item['stock_quantity'] == 0 ? 'Out of Stock' : ($item['stock_quantity'] <= 5 ? 'Critical' : ($item['stock_quantity'] <= 10 ? 'Low Stock' : 'In Stock'));
+                                                      ?>
                                                             <tr>
                                                                   <td>
+                                                                        <input type="checkbox" name="product_ids[]" value="<?php echo $item['id']; ?>" class="form-check-input product-checkbox">
+                                                                  </td>
+                                                                  <td>
                                                                         <div class="d-flex align-items-center">
-                                                                              <?php if ($product['image_path']): ?>
-                                                                                    <img src="../<?php echo $product['image_path']; ?>"
-                                                                                          alt="<?php echo htmlspecialchars($product['name']); ?>"
-                                                                                          class="me-2" style="width: 40px; height: 40px; object-fit: cover;">
-                                                                              <?php endif; ?>
+                                                                              <img src="<?php echo $img_path; ?>"
+                                                                                    alt="<?php echo htmlspecialchars($item['name']); ?>"
+                                                                                    class="img-thumbnail me-2" style="width: 40px; height: 40px; object-fit: cover;">
                                                                               <div>
-                                                                                    <strong><?php echo htmlspecialchars($product['name']); ?></strong>
-                                                                                    <br><small class="text-muted"><?php echo $product['product_code']; ?></small>
+                                                                                    <div class="fw-medium"><?php echo htmlspecialchars($item['name']); ?></div>
+                                                                                    <small class="text-muted">ID: <?php echo $item['id']; ?></small>
                                                                               </div>
                                                                         </div>
                                                                   </td>
-                                                                  <td><?php echo htmlspecialchars($product['category']); ?></td>
                                                                   <td>
-                                                                        <?php
-                                                                        $stock_level = $product['stock_quantity'];
-                                                                        $badge_class = $stock_level == 0 ? 'danger' : ($stock_level < 10 ? 'warning' : 'success');
-                                                                        ?>
-                                                                        <span class="badge bg-<?php echo $badge_class; ?>">
-                                                                              <?php echo $stock_level; ?> units
+                                                                        <span class="badge bg-secondary"><?php echo htmlspecialchars($item['product_code'] ?? 'N/A'); ?></span>
+                                                                  </td>
+                                                                  <td><?php echo htmlspecialchars($item['category'] ?? 'Uncategorized'); ?></td>
+                                                                  <td>
+                                                                        <span class="fw-bold text-<?php echo $stock_status_class; ?>">
+                                                                              <?php echo number_format($item['stock_quantity']); ?>
                                                                         </span>
                                                                   </td>
-                                                                  <td>$<?php echo number_format($product['price'], 2); ?></td>
                                                                   <td>
-                                                                        <?php
-                                                                        if ($stock_level == 0) {
-                                                                              echo '<span class="badge bg-danger">Out of Stock</span>';
-                                                                        } elseif ($stock_level < 10) {
-                                                                              echo '<span class="badge bg-warning">Low Stock</span>';
-                                                                        } else {
-                                                                              echo '<span class="badge bg-success">In Stock</span>';
-                                                                        }
-                                                                        ?>
+                                                                        <span class="badge bg-<?php echo $stock_status_class; ?>">
+                                                                              <i class="fas fa-<?php
+                                                                                                echo $item['stock_quantity'] == 0 ? 'times-circle' : ($item['stock_quantity'] <= 5 ? 'exclamation-triangle' : ($item['stock_quantity'] <= 10 ? 'info-circle' : 'check-circle'));
+                                                                                                ?> me-1"></i>
+                                                                              <?php echo $stock_status_text; ?>
+                                                                        </span>
                                                                   </td>
-                                                                  <td><?php echo date('M d, Y H:i', strtotime($product['updated_at'])); ?></td>
                                                                   <td>
-                                                                        <a href="products.php?edit=<?php echo $product['id']; ?>" class="btn btn-sm btn-primary">
-                                                                              <i class="fas fa-edit"></i>
-                                                                        </a>
-                                                                        <a href="products.php?view=<?php echo $product['id']; ?>" class="btn btn-sm btn-info">
-                                                                              <i class="fas fa-eye"></i>
-                                                                        </a>
+                                                                        <span class="badge bg-info"><?php echo number_format($item['total_sold']); ?></span>
+                                                                  </td>
+                                                                  <td>
+                                                                        <small class="text-muted"><?php echo date('M d, Y H:i', strtotime($item['last_updated'])); ?></small>
+                                                                  </td>
+                                                                  <td>
+                                                                        <div class="btn-group" role="group">
+                                                                              <button class="btn btn-sm btn-primary" onclick="updateStock(<?php echo htmlspecialchars(json_encode($item)); ?>)">
+                                                                                    <i class="fas fa-edit"></i>
+                                                                              </button>
+                                                                              <button class="btn btn-sm btn-info" onclick="viewHistory(<?php echo $item['id']; ?>)">
+                                                                                    <i class="fas fa-history"></i>
+                                                                              </button>
+                                                                        </div>
                                                                   </td>
                                                             </tr>
                                                       <?php endforeach; ?>
@@ -474,18 +519,35 @@ function generatePaginationLinks($current_page, $total_pages, $base_url = 'inven
                                           </table>
                                     </div>
 
-                                    <!-- Pagination Controls -->
+                                    <!-- Pagination -->
                                     <?php if ($total_pages > 1): ?>
-                                          <div class="d-flex justify-content-between align-items-center mt-3">
-                                                <div class="text-muted">
-                                                      Showing <?php echo $offset + 1; ?> to <?php echo min($offset + $items_per_page, $total_products); ?> of <?php echo $total_products; ?> products
-                                                </div>
-                                                <nav aria-label="Inventory pagination">
-                                                      <ul class="pagination pagination-sm mb-0">
-                                                            <?php echo generatePaginationLinks($current_page, $total_pages); ?>
-                                                      </ul>
-                                                </nav>
-                                          </div>
+                                          <nav aria-label="Inventory pagination" class="mt-4">
+                                                <ul class="pagination justify-content-center">
+                                                      <?php if ($current_page > 1): ?>
+                                                            <li class="page-item">
+                                                                  <a class="page-link" href="?page=<?php echo $current_page - 1; ?>&search=<?php echo urlencode($search); ?>&category=<?php echo urlencode($category); ?>&stock_status=<?php echo urlencode($stock_status); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
+                                                                        Previous
+                                                                  </a>
+                                                            </li>
+                                                      <?php endif; ?>
+
+                                                      <?php for ($i = max(1, $current_page - 2); $i <= min($total_pages, $current_page + 2); $i++): ?>
+                                                            <li class="page-item <?php echo $i === $current_page ? 'active' : ''; ?>">
+                                                                  <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($search); ?>&category=<?php echo urlencode($category); ?>&stock_status=<?php echo urlencode($stock_status); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
+                                                                        <?php echo $i; ?>
+                                                                  </a>
+                                                            </li>
+                                                      <?php endfor; ?>
+
+                                                      <?php if ($current_page < $total_pages): ?>
+                                                            <li class="page-item">
+                                                                  <a class="page-link" href="?page=<?php echo $current_page + 1; ?>&search=<?php echo urlencode($search); ?>&category=<?php echo urlencode($category); ?>&stock_status=<?php echo urlencode($stock_status); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
+                                                                        Next
+                                                                  </a>
+                                                            </li>
+                                                      <?php endif; ?>
+                                                </ul>
+                                          </nav>
                                     <?php endif; ?>
                               </div>
                         </div>
@@ -498,61 +560,151 @@ function generatePaginationLinks($current_page, $total_pages, $base_url = 'inven
       <!-- Custom JS -->
       <script src="assets/js/admin.js"></script>
 
+      <!-- Update Stock Modal -->
+      <div class="modal fade" id="updateStockModal" tabindex="-1" aria-labelledby="updateStockModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                  <div class="modal-content">
+                        <div class="modal-header">
+                              <h5 class="modal-title" id="updateStockModalLabel">Update Stock</h5>
+                              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form method="POST" class="form-modern">
+                              <div class="modal-body">
+                                    <input type="hidden" name="action" value="update_stock">
+                                    <input type="hidden" name="product_id" id="update_product_id">
+
+                                    <div class="mb-3">
+                                          <label class="form-label">Product</label>
+                                          <div class="form-control-plaintext" id="update_product_name"></div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                          <label for="new_quantity" class="form-label">New Stock Quantity *</label>
+                                          <input type="number" class="form-control" id="new_quantity" name="new_quantity" min="0" required>
+                                    </div>
+
+                                    <div class="mb-3">
+                                          <label for="adjustment_type" class="form-label">Adjustment Type</label>
+                                          <select class="form-select" id="adjustment_type" name="adjustment_type" required>
+                                                <option value="manual">Manual Adjustment</option>
+                                                <option value="restock">Restock</option>
+                                                <option value="damage">Damage/Loss</option>
+                                                <option value="correction">Correction</option>
+                                          </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                          <label for="notes" class="form-label">Notes</label>
+                                          <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Optional notes about this adjustment"></textarea>
+                                    </div>
+                              </div>
+                              <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-primary">Update Stock</button>
+                              </div>
+                        </form>
+                  </div>
+            </div>
+      </div>
+
+      <!-- Bulk Update Modal -->
+      <div class="modal fade" id="bulkUpdateModal" tabindex="-1" aria-labelledby="bulkUpdateModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                  <div class="modal-content">
+                        <div class="modal-header">
+                              <h5 class="modal-title" id="bulkUpdateModalLabel">Bulk Stock Update</h5>
+                              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form method="POST" class="form-modern">
+                              <div class="modal-body">
+                                    <input type="hidden" name="action" value="bulk_update">
+
+                                    <div class="alert alert-info">
+                                          <i class="fas fa-info-circle me-2"></i>
+                                          Select products from the table above, then choose how to adjust their stock levels.
+                                    </div>
+
+                                    <div class="mb-3">
+                                          <label for="bulk_adjustment_type" class="form-label">Adjustment Type *</label>
+                                          <select class="form-select" id="bulk_adjustment_type" name="bulk_adjustment_type" required>
+                                                <option value="">Select Type</option>
+                                                <option value="add">Add Stock</option>
+                                                <option value="subtract">Subtract Stock</option>
+                                          </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                          <label for="bulk_adjustment_value" class="form-label">Adjustment Value *</label>
+                                          <input type="number" class="form-control" id="bulk_adjustment_value" name="bulk_adjustment_value" min="1" required placeholder="Enter quantity">
+                                    </div>
+
+                                    <div class="mb-3">
+                                          <label for="bulk_notes" class="form-label">Notes</label>
+                                          <textarea class="form-control" id="bulk_notes" name="bulk_notes" rows="3" placeholder="Notes for this bulk adjustment"></textarea>
+                                    </div>
+                              </div>
+                              <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-warning">Bulk Update</button>
+                              </div>
+                        </form>
+                  </div>
+            </div>
+      </div>
+
       <script>
-            // Category Chart
-            const categoryCtx = document.getElementById('categoryChart').getContext('2d');
-            const categoryChart = new Chart(categoryCtx, {
-                  type: 'bar',
-                  data: {
-                        labels: <?php echo json_encode(array_column($stock_by_category, 'category')); ?>,
-                        datasets: [{
-                              label: 'Total Stock',
-                              data: <?php echo json_encode(array_column($stock_by_category, 'total_stock')); ?>,
-                              backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                              borderColor: 'rgb(75, 192, 192)',
-                              borderWidth: 1
-                        }]
-                  },
-                  options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                              y: {
-                                    beginAtZero: true
-                              }
-                        }
-                  }
+            // Select all functionality
+            document.getElementById('selectAll').addEventListener('change', function() {
+                  const checkboxes = document.querySelectorAll('.product-checkbox');
+                  checkboxes.forEach(checkbox => {
+                        checkbox.checked = this.checked;
+                  });
             });
 
-            // Stock Status Chart
-            const stockStatusCtx = document.getElementById('stockStatusChart').getContext('2d');
-            const stockStatusChart = new Chart(stockStatusCtx, {
-                  type: 'doughnut',
-                  data: {
-                        labels: ['In Stock', 'Low Stock', 'Out of Stock'],
-                        datasets: [{
-                              data: [
-                                    <?php echo $inventory_stats['total_products'] - $inventory_stats['low_stock'] - $inventory_stats['out_of_stock']; ?>,
-                                    <?php echo $inventory_stats['low_stock']; ?>,
-                                    <?php echo $inventory_stats['out_of_stock']; ?>
-                              ],
-                              backgroundColor: [
-                                    '#28a745',
-                                    '#ffc107',
-                                    '#dc3545'
-                              ]
-                        }]
-                  },
-                  options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                              legend: {
-                                    position: 'bottom'
-                              }
-                        }
-                  }
-            });
+            function updateStock(item) {
+                  document.getElementById('update_product_id').value = item.id;
+                  document.getElementById('update_product_name').textContent = item.name;
+                  document.getElementById('new_quantity').value = item.stock_quantity;
+                  document.getElementById('adjustment_type').value = 'manual';
+                  document.getElementById('notes').value = '';
+
+                  const updateModal = new bootstrap.Modal(document.getElementById('updateStockModal'));
+                  updateModal.show();
+            }
+
+            function viewHistory(productId) {
+                  // This would typically open a modal with the product's inventory history
+                  alert('Inventory history for product ID: ' + productId + ' would be displayed here.');
+            }
+
+            function exportInventory() {
+                  // Export all inventory data
+                  const table = document.getElementById('inventoryTable');
+                  const html = table.outerHTML;
+                  const url = 'data:application/vnd.ms-excel,' + encodeURIComponent(html);
+                  const downloadLink = document.createElement("a");
+                  document.body.appendChild(downloadLink);
+                  downloadLink.href = url;
+                  downloadLink.download = 'inventory_report.xls';
+                  downloadLink.click();
+                  document.body.removeChild(downloadLink);
+            }
+
+            function exportTable(tableId, filename) {
+                  const table = document.getElementById(tableId);
+                  const html = table.outerHTML;
+                  const url = 'data:application/vnd.ms-excel,' + encodeURIComponent(html);
+                  const downloadLink = document.createElement("a");
+                  document.body.appendChild(downloadLink);
+                  downloadLink.href = url;
+                  downloadLink.download = filename + '.xls';
+                  downloadLink.click();
+                  document.body.removeChild(downloadLink);
+            }
+
+            function printPage() {
+                  window.print();
+            }
       </script>
 </body>
 

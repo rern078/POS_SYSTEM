@@ -1,6 +1,8 @@
 // Admin Template JavaScript
+console.log('Admin JS loaded!');
 
 document.addEventListener('DOMContentLoaded', function () {
+      console.log('DOM Content Loaded!');
       // Initialize tooltips
       var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
       var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -298,4 +300,339 @@ window.formatDate = function (date) {
 
 window.formatNumber = function (number) {
       return new Intl.NumberFormat('en-US').format(number);
-}; 
+};
+
+// Admin Layout JavaScript
+
+document.addEventListener('DOMContentLoaded', function () {
+      // Sidebar toggle functionality
+      const sidebar = document.getElementById('adminSidebar');
+      const sidebarToggle = document.getElementById('sidebarToggle');
+      const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+      const adminMain = document.querySelector('.admin-main');
+
+      // Debug logging
+      console.log('Sidebar elements found:', {
+            sidebar: sidebar,
+            sidebarToggle: sidebarToggle,
+            sidebarToggleBtn: sidebarToggleBtn,
+            adminMain: adminMain
+      });
+
+      // Check for saved sidebar state
+      const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+
+      if (sidebarCollapsed) {
+            sidebar.classList.add('collapsed');
+            adminMain.classList.add('sidebar-collapsed');
+      }
+
+      // Sidebar toggle handlers
+      function toggleSidebar() {
+            console.log('Toggle sidebar clicked!');
+            console.log('Window width:', window.innerWidth);
+
+            if (window.innerWidth > 992) {
+                  // Desktop: toggle collapsed state
+                  console.log('Desktop mode - toggling collapsed state');
+                  sidebar.classList.toggle('collapsed');
+                  adminMain.classList.toggle('sidebar-collapsed');
+                  // Save state to localStorage
+                  localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+                  console.log('Sidebar collapsed:', sidebar.classList.contains('collapsed'));
+            } else {
+                  // Mobile: toggle show/hide
+                  console.log('Mobile mode - toggling show state');
+                  sidebar.classList.toggle('show');
+                  console.log('Sidebar shown:', sidebar.classList.contains('show'));
+            }
+      }
+
+      if (sidebarToggle) {
+            console.log('Adding click listener to sidebarToggle');
+            sidebarToggle.addEventListener('click', function (e) {
+                  console.log('Sidebar toggle clicked!');
+                  e.preventDefault();
+                  toggleSidebar();
+            });
+      } else {
+            console.log('sidebarToggle element not found!');
+      }
+
+      if (sidebarToggleBtn) {
+            console.log('Adding click listener to sidebarToggleBtn');
+            sidebarToggleBtn.addEventListener('click', function (e) {
+                  console.log('Sidebar toggle btn clicked!');
+                  e.preventDefault();
+                  toggleSidebar();
+            });
+      } else {
+            console.log('sidebarToggleBtn element not found!');
+      }
+
+      // Close mobile sidebar when clicking outside
+      document.addEventListener('click', function (e) {
+            if (window.innerWidth <= 992) {
+                  if (!sidebar.contains(e.target) && !sidebarToggleBtn.contains(e.target)) {
+                        sidebar.classList.remove('show');
+                  }
+            }
+      });
+
+      // Handle window resize
+      window.addEventListener('resize', function () {
+            if (window.innerWidth > 992) {
+                  sidebar.classList.remove('show');
+            }
+      });
+
+      // Auto-hide alerts after 5 seconds
+      const alerts = document.querySelectorAll('.alert-modern');
+      alerts.forEach(function (alert) {
+            setTimeout(function () {
+                  if (alert.parentNode) {
+                        alert.style.transition = 'opacity 0.5s ease';
+                        alert.style.opacity = '0';
+                        setTimeout(function () {
+                              if (alert.parentNode) {
+                                    alert.parentNode.removeChild(alert);
+                              }
+                        }, 500);
+                  }
+            }, 5000);
+      });
+
+      // Table row selection
+      const tableRows = document.querySelectorAll('.table-modern tbody tr');
+      tableRows.forEach(function (row) {
+            row.addEventListener('click', function () {
+                  // Remove active class from all rows
+                  tableRows.forEach(r => r.classList.remove('table-active'));
+                  // Add active class to clicked row
+                  this.classList.add('table-active');
+            });
+      });
+
+      // Form validation enhancement
+      const forms = document.querySelectorAll('.form-modern');
+      forms.forEach(function (form) {
+            const inputs = form.querySelectorAll('input, select, textarea');
+
+            inputs.forEach(function (input) {
+                  input.addEventListener('blur', function () {
+                        validateField(this);
+                  });
+
+                  input.addEventListener('input', function () {
+                        if (this.classList.contains('is-invalid')) {
+                              validateField(this);
+                        }
+                  });
+            });
+      });
+
+      function validateField(field) {
+            const value = field.value.trim();
+            const fieldName = field.name;
+            let isValid = true;
+            let errorMessage = '';
+
+            // Remove existing validation classes
+            field.classList.remove('is-valid', 'is-invalid');
+
+            // Remove existing error message
+            const existingError = field.parentNode.querySelector('.invalid-feedback');
+            if (existingError) {
+                  existingError.remove();
+            }
+
+            // Validation rules
+            if (field.hasAttribute('required') && !value) {
+                  isValid = false;
+                  errorMessage = 'This field is required.';
+            } else if (field.type === 'email' && value && !isValidEmail(value)) {
+                  isValid = false;
+                  errorMessage = 'Please enter a valid email address.';
+            } else if (field.type === 'number' && value && isNaN(value)) {
+                  isValid = false;
+                  errorMessage = 'Please enter a valid number.';
+            } else if (field.hasAttribute('minlength') && value.length < field.getAttribute('minlength')) {
+                  isValid = false;
+                  errorMessage = `Minimum length is ${field.getAttribute('minlength')} characters.`;
+            } else if (field.hasAttribute('maxlength') && value.length > field.getAttribute('maxlength')) {
+                  isValid = false;
+                  errorMessage = `Maximum length is ${field.getAttribute('maxlength')} characters.`;
+            }
+
+            // Apply validation result
+            if (isValid && value) {
+                  field.classList.add('is-valid');
+            } else if (!isValid) {
+                  field.classList.add('is-invalid');
+
+                  // Add error message
+                  const errorDiv = document.createElement('div');
+                  errorDiv.className = 'invalid-feedback';
+                  errorDiv.textContent = errorMessage;
+                  field.parentNode.appendChild(errorDiv);
+            }
+      }
+
+      function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+      }
+
+      // Loading states for buttons
+      const buttons = document.querySelectorAll('.btn-modern');
+      buttons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                  if (!this.classList.contains('btn-loading')) {
+                        this.classList.add('btn-loading');
+                        this.disabled = true;
+
+                        // Add loading spinner
+                        const originalText = this.innerHTML;
+                        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading...';
+
+                        // Remove loading state after 2 seconds (for demo purposes)
+                        // In real applications, this should be removed when the action completes
+                        setTimeout(() => {
+                              this.classList.remove('btn-loading');
+                              this.disabled = false;
+                              this.innerHTML = originalText;
+                        }, 2000);
+                  }
+            });
+      });
+
+      // Search functionality for tables
+      const searchInputs = document.querySelectorAll('.table-search');
+      searchInputs.forEach(function (searchInput) {
+            searchInput.addEventListener('input', function () {
+                  const searchTerm = this.value.toLowerCase();
+                  const tableId = this.getAttribute('data-table');
+                  const table = document.getElementById(tableId);
+
+                  if (table) {
+                        const rows = table.querySelectorAll('tbody tr');
+
+                        rows.forEach(function (row) {
+                              const text = row.textContent.toLowerCase();
+                              if (text.includes(searchTerm)) {
+                                    row.style.display = '';
+                              } else {
+                                    row.style.display = 'none';
+                              }
+                        });
+                  }
+            });
+      });
+
+      // Chart initialization (if Chart.js is available)
+      if (typeof Chart !== 'undefined') {
+            // Initialize any charts on the page
+            const chartCanvases = document.querySelectorAll('canvas[data-chart]');
+            chartCanvases.forEach(function (canvas) {
+                  const chartType = canvas.getAttribute('data-chart');
+                  const chartData = JSON.parse(canvas.getAttribute('data-chart-data') || '{}');
+
+                  new Chart(canvas, {
+                        type: chartType,
+                        data: chartData,
+                        options: {
+                              responsive: true,
+                              maintainAspectRatio: false,
+                              plugins: {
+                                    legend: {
+                                          position: 'bottom',
+                                    }
+                              }
+                        }
+                  });
+            });
+      }
+
+      // Notification system
+      function showNotification(message, type = 'info', duration = 5000) {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-modern notification-toast`;
+            notification.style.cssText = `
+                  position: fixed;
+                  top: 20px;
+                  right: 20px;
+                  z-index: 9999;
+                  min-width: 300px;
+                  animation: slideInRight 0.3s ease;
+            `;
+            notification.innerHTML = `
+                  <div class="d-flex align-items-center">
+                        <i class="fas fa-${getNotificationIcon(type)} me-2"></i>
+                        <span>${message}</span>
+                        <button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.remove()"></button>
+                  </div>
+            `;
+
+            document.body.appendChild(notification);
+
+            // Auto remove after duration
+            setTimeout(() => {
+                  if (notification.parentNode) {
+                        notification.style.animation = 'slideOutRight 0.3s ease';
+                        setTimeout(() => {
+                              if (notification.parentNode) {
+                                    notification.parentNode.removeChild(notification);
+                              }
+                        }, 300);
+                  }
+            }, duration);
+      }
+
+      function getNotificationIcon(type) {
+            const icons = {
+                  'success': 'check-circle',
+                  'danger': 'exclamation-circle',
+                  'warning': 'exclamation-triangle',
+                  'info': 'info-circle'
+            };
+            return icons[type] || 'info-circle';
+      }
+
+      // Make notification function globally available
+      window.showNotification = showNotification;
+
+      // Add CSS animations for notifications
+      const style = document.createElement('style');
+      style.textContent = `
+            @keyframes slideInRight {
+                  from {
+                        transform: translateX(100%);
+                        opacity: 0;
+                  }
+                  to {
+                        transform: translateX(0);
+                        opacity: 1;
+                  }
+            }
+            
+            @keyframes slideOutRight {
+                  from {
+                        transform: translateX(0);
+                        opacity: 1;
+                  }
+                  to {
+                        transform: translateX(100%);
+                        opacity: 0;
+                  }
+            }
+            
+            .table-active {
+                  background-color: rgba(78, 115, 223, 0.1) !important;
+            }
+            
+            .btn-loading {
+                  pointer-events: none;
+            }
+      `;
+      document.head.appendChild(style);
+}); 

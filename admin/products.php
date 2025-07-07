@@ -203,10 +203,12 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Get categories for filter
-$stmt = $pdo->prepare("SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != '' ORDER BY category");
-$stmt->execute();
-$categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
+// Get categories for filter dropdown
+$categories = [];
+$catStmt = $pdo->query("SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != '' ORDER BY category");
+while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
+      $categories[] = $row['category'];
+}
 ?>
 
 <!DOCTYPE html>
@@ -221,382 +223,360 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
       <!-- Font Awesome -->
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+      <!-- Google Fonts -->
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
       <!-- Custom CSS -->
       <link rel="stylesheet" href="assets/css/admin.css">
 </head>
 
 <body>
-      <!-- Navigation -->
-      <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-            <div class="container-fluid">
-                  <a class="navbar-brand" href="index.php">
-                        <i class="fas fa-store me-2"></i>POS Admin
-                  </a>
+      <div class="admin-layout">
+            <?php include 'side.php'; ?>
 
-                  <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                        <span class="navbar-toggler-icon"></span>
-                  </button>
-
-                  <div class="collapse navbar-collapse" id="navbarNav">
-                        <ul class="navbar-nav me-auto">
-                              <li class="nav-item">
-                                    <a class="nav-link" href="index.php">
-                                          <i class="fas fa-tachometer-alt me-1"></i>Dashboard
-                                    </a>
-                              </li>
-                              <li class="nav-item">
-                                    <a class="nav-link active" href="products.php">
-                                          <i class="fas fa-box me-1"></i>Products
-                                    </a>
-                              </li>
-                              <li class="nav-item">
-                                    <a class="nav-link" href="sales.php">
-                                          <i class="fas fa-chart-line me-1"></i>Sales
-                                    </a>
-                              </li>
-                              <li class="nav-item">
-                                    <a class="nav-link" href="inventory.php">
-                                          <i class="fas fa-warehouse me-1"></i>Inventory
-                                    </a>
-                              </li>
-                              <li class="nav-item">
-                                    <a class="nav-link" href="users.php">
-                                          <i class="fas fa-users me-1"></i>Users
-                                    </a>
-                              </li>
-                              <li class="nav-item">
-                                    <a class="nav-link" href="reports.php">
-                                          <i class="fas fa-file-alt me-1"></i>Reports
-                                    </a>
-                              </li>
-                        </ul>
-
-                        <ul class="navbar-nav">
-                              <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                                          <i class="fas fa-user-circle me-1"></i><?php echo $_SESSION['username']; ?>
-                                    </a>
-                                    <ul class="dropdown-menu">
-                                          <li><a class="dropdown-item" href="profile.php"><i class="fas fa-user me-2"></i>Profile</a></li>
-                                          <li><a class="dropdown-item" href="settings.php"><i class="fas fa-cog me-2"></i>Settings</a></li>
-                                          <li>
-                                                <hr class="dropdown-divider">
-                                          </li>
-                                          <li><a class="dropdown-item" href="logout.php"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-                                    </ul>
-                              </li>
-                        </ul>
-                  </div>
-            </div>
-      </nav>
-
-      <!-- Main Content -->
-      <div class="container-fluid mt-4">
-            <!-- Page Header -->
-            <div class="row mb-4">
-                  <div class="col-12 d-flex justify-content-between align-items-center">
-                        <div>
-                              <h1 class="h3 mb-0 text-gray-800">Products Management</h1>
-                              <p class="text-muted">Manage your product inventory</p>
-                        </div>
-                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                              <i class="fas fa-plus me-2"></i>Add Product
-                        </button>
-                  </div>
-            </div>
-
-            <!-- Messages -->
-            <?php if ($message): ?>
-                  <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="fas fa-check-circle me-2"></i><?php echo htmlspecialchars($message); ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                  </div>
-            <?php endif; ?>
-
-            <?php if ($error): ?>
-                  <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="fas fa-exclamation-triangle me-2"></i><?php echo htmlspecialchars($error); ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                  </div>
-            <?php endif; ?>
-
-            <!-- Filters and Search -->
-            <div class="card shadow mb-4">
-                  <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary">Filters & Search</h6>
-                  </div>
-                  <div class="card-body">
-                        <form method="GET" class="row g-3">
-                              <div class="col-md-4">
-                                    <label for="search" class="form-label">Search Products</label>
-                                    <input type="text" class="form-control" id="search" name="search"
-                                          placeholder="Search by name or description..."
-                                          value="<?php echo htmlspecialchars($search); ?>">
-                              </div>
-                              <div class="col-md-3">
-                                    <label for="category" class="form-label">Category</label>
-                                    <select class="form-select" id="category" name="category">
-                                          <option value="">All Categories</option>
-                                          <?php foreach ($categories as $cat): ?>
-                                                <option value="<?php echo htmlspecialchars($cat); ?>"
-                                                      <?php echo $category === $cat ? 'selected' : ''; ?>>
-                                                      <?php echo htmlspecialchars($cat); ?>
-                                                </option>
-                                          <?php endforeach; ?>
-                                    </select>
-                              </div>
-                              <div class="col-md-2">
-                                    <label for="sort" class="form-label">Sort By</label>
-                                    <select class="form-select" id="sort" name="sort">
-                                          <option value="id" <?php echo $sort === 'id' ? 'selected' : ''; ?>>ID</option>
-                                          <option value="name" <?php echo $sort === 'name' ? 'selected' : ''; ?>>Name</option>
-                                          <option value="price" <?php echo $sort === 'price' ? 'selected' : ''; ?>>Price</option>
-                                          <option value="stock_quantity" <?php echo $sort === 'stock_quantity' ? 'selected' : ''; ?>>Stock</option>
-                                          <option value="created_at" <?php echo $sort === 'created_at' ? 'selected' : ''; ?>>Date Added</option>
-                                    </select>
-                              </div>
-                              <div class="col-md-2">
-                                    <label for="order" class="form-label">Order</label>
-                                    <select class="form-select" id="order" name="order">
-                                          <option value="ASC" <?php echo $order === 'ASC' ? 'selected' : ''; ?>>Ascending</option>
-                                          <option value="DESC" <?php echo $order === 'DESC' ? 'selected' : ''; ?>>Descending</option>
-                                    </select>
-                              </div>
-                              <div class="col-md-1">
-                                    <label class="form-label">&nbsp;</label>
-                                    <button type="submit" class="btn btn-primary w-100">
-                                          <i class="fas fa-search"></i>
-                                    </button>
-                              </div>
-                        </form>
-                  </div>
-            </div>
-
-            <!-- Products Table -->
-            <div class="card shadow mb-4">
-                  <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                        <h6 class="m-0 font-weight-bold text-primary">Products List</h6>
-                        <div>
-                              <a href="generate_qr.php" class="btn btn-success me-2">
-                                    <i class="fas fa-qrcode me-1"></i>Generate QR Codes
-                              </a>
-                              <button class="btn btn-sm btn-outline-secondary" onclick="exportTable('productsTable', 'products')">
-                                    <i class="fas fa-download me-1"></i>Export
+            <!-- Main Content Wrapper -->
+            <div class="admin-main">
+                  <!-- Top Navigation Bar -->
+                  <nav class="admin-topbar">
+                        <div class="topbar-left">
+                              <button class="btn btn-link sidebar-toggle-btn" id="sidebarToggleBtn">
+                                    <i class="fas fa-bars"></i>
                               </button>
-                              <button class="btn btn-sm btn-outline-secondary" onclick="printPage()">
-                                    <i class="fas fa-print me-1"></i>Print
-                              </button>
-                        </div>
-                  </div>
-                  <div class="card-body">
-                        <div class="table-responsive">
-                              <table class="table table-bordered" id="productsTable" width="100%" cellspacing="0">
-                                    <thead>
-                                          <tr>
-                                                <th>ID</th>
-                                                <th>Image</th>
-                                                <th>Code</th>
-                                                <th>Barcode</th>
-                                                <th>QR Code</th>
-                                                <th>Name</th>
-                                                <th>Description</th>
-                                                <th>Price</th>
-                                                <th>Discount</th>
-                                                <th>Stock</th>
-                                                <th>Category</th>
-                                                <th>Status</th>
-                                                <th>Actions</th>
-                                          </tr>
-                                    </thead>
-                                    <tbody>
-                                          <?php foreach ($products as $product):
-                                                $img_path = !empty($product['image_path']) ? '../' . htmlspecialchars($product['image_path']) : '../images/placeholder.jpg';
-                                          ?>
-                                                <tr>
-                                                      <td><?php echo $product['id']; ?></td>
-                                                      <td>
-                                                            <img src="<?php echo $img_path; ?>"
-                                                                  alt="<?php echo htmlspecialchars($product['name']); ?>"
-                                                                  class="img-thumbnail" style="width: 50px; height: 50px; object-fit: cover;">
-                                                      </td>
-                                                      <td>
-                                                            <span class="badge bg-info"><?php echo htmlspecialchars($product['product_code'] ?? 'N/A'); ?></span>
-                                                      </td>
-                                                      <td>
-                                                            <span class="badge bg-secondary"><?php echo htmlspecialchars($product['barcode'] ?? 'N/A'); ?></span>
-                                                      </td>
-                                                      <td>
-                                                            <span class="badge bg-dark"><?php echo htmlspecialchars($product['qr_code'] ?? 'N/A'); ?></span>
-                                                      </td>
-                                                      <td><?php echo htmlspecialchars($product['name']); ?></td>
-                                                      <td><?php echo htmlspecialchars(substr($product['description'], 0, 50)) . (strlen($product['description']) > 50 ? '...' : ''); ?></td>
-                                                      <td>$<?php echo number_format($product['price'], 2); ?></td>
-                                                      <td>
-                                                            <?php if ($product['discount_price'] && $product['discount_price'] > 0): ?>
-                                                                  <span class="badge bg-success">$<?php echo number_format($product['discount_price'], 2); ?></span>
-                                                            <?php else: ?>
-                                                                  <span class="text-muted">-</span>
-                                                            <?php endif; ?>
-                                                      </td>
-                                                      <td>
-                                                            <span class="badge bg-<?php echo $product['stock_quantity'] < 10 ? 'danger' : ($product['stock_quantity'] < 50 ? 'warning' : 'success'); ?>">
-                                                                  <?php echo $product['stock_quantity']; ?>
-                                                            </span>
-                                                      </td>
-                                                      <td><?php echo htmlspecialchars($product['category'] ?? 'Uncategorized'); ?></td>
-                                                      <td>
-                                                            <span class="badge bg-<?php echo $product['stock_quantity'] > 0 ? 'success' : 'danger'; ?>">
-                                                                  <?php echo $product['stock_quantity'] > 0 ? 'In Stock' : 'Out of Stock'; ?>
-                                                            </span>
-                                                      </td>
-                                                      <td>
-                                                            <div class="btn-group" role="group">
-                                                                  <button class="btn btn-sm btn-primary" onclick="editProduct(<?php echo htmlspecialchars(json_encode($product)); ?>)">
-                                                                        <i class="fas fa-edit"></i>
-                                                                  </button>
-                                                                  <button class="btn btn-sm btn-danger btn-delete" onclick="deleteProduct(<?php echo $product['id']; ?>)">
-                                                                        <i class="fas fa-trash"></i>
-                                                                  </button>
-                                                            </div>
-                                                      </td>
-                                                </tr>
-                                          <?php endforeach; ?>
-                                    </tbody>
-                              </table>
-                        </div>
-
-                        <?php if (empty($products)): ?>
-                              <div class="text-center py-4">
-                                    <i class="fas fa-box fa-3x text-muted mb-3"></i>
-                                    <h5 class="text-muted">No products found</h5>
-                                    <p class="text-muted">Try adjusting your search criteria or add a new product.</p>
-                              </div>
-                        <?php endif; ?>
-
-                        <!-- Pagination -->
-                        <?php if ($total_pages > 1): ?>
-                              <div class="d-flex justify-content-between align-items-center mt-4">
-                                    <div class="text-muted">
-                                          Showing <?php echo ($offset + 1); ?> to <?php echo min($offset + $items_per_page, $total_items); ?> of <?php echo $total_items; ?> products
-                                    </div>
-                                    <nav aria-label="Products pagination">
-                                          <ul class="pagination mb-0">
-                                                <!-- Previous page -->
-                                                <?php if ($current_page > 1): ?>
-                                                      <li class="page-item">
-                                                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $current_page - 1])); ?>">
-                                                                  <i class="fas fa-chevron-left"></i>
-                                                            </a>
-                                                      </li>
-                                                <?php else: ?>
-                                                      <li class="page-item disabled">
-                                                            <span class="page-link">
-                                                                  <i class="fas fa-chevron-left"></i>
-                                                            </span>
-                                                      </li>
-                                                <?php endif; ?>
-
-                                                <!-- Page numbers -->
-                                                <?php
-                                                $start_page = max(1, $current_page - 2);
-                                                $end_page = min($total_pages, $current_page + 2);
-
-                                                if ($start_page > 1): ?>
-                                                      <li class="page-item">
-                                                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => 1])); ?>">1</a>
-                                                      </li>
-                                                      <?php if ($start_page > 2): ?>
-                                                            <li class="page-item disabled">
-                                                                  <span class="page-link">...</span>
-                                                            </li>
-                                                      <?php endif; ?>
-                                                <?php endif; ?>
-
-                                                <?php for ($i = $start_page; $i <= $end_page; $i++): ?>
-                                                      <li class="page-item <?php echo $i === $current_page ? 'active' : ''; ?>">
-                                                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>"><?php echo $i; ?></a>
-                                                      </li>
-                                                <?php endfor; ?>
-
-                                                <?php if ($end_page < $total_pages): ?>
-                                                      <?php if ($end_page < $total_pages - 1): ?>
-                                                            <li class="page-item disabled">
-                                                                  <span class="page-link">...</span>
-                                                            </li>
-                                                      <?php endif; ?>
-                                                      <li class="page-item">
-                                                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $total_pages])); ?>"><?php echo $total_pages; ?></a>
-                                                      </li>
-                                                <?php endif; ?>
-
-                                                <!-- Next page -->
-                                                <?php if ($current_page < $total_pages): ?>
-                                                      <li class="page-item">
-                                                            <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $current_page + 1])); ?>">
-                                                                  <i class="fas fa-chevron-right"></i>
-                                                            </a>
-                                                      </li>
-                                                <?php else: ?>
-                                                      <li class="page-item disabled">
-                                                            <span class="page-link">
-                                                                  <i class="fas fa-chevron-right"></i>
-                                                            </span>
-                                                      </li>
-                                                <?php endif; ?>
-                                          </ul>
+                              <div class="breadcrumb-container">
+                                    <nav aria-label="breadcrumb">
+                                          <ol class="breadcrumb">
+                                                <li class="breadcrumb-item"><a href="index.php">Home</a></li>
+                                                <li class="breadcrumb-item active" aria-current="page">Products</li>
+                                          </ol>
                                     </nav>
                               </div>
+                        </div>
+                        <div class="topbar-right">
+                              <div class="topbar-actions">
+                                    <div class="dropdown">
+                                          <button class="btn btn-link notification-btn" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-bell"></i>
+                                                <span class="notification-badge">3</span>
+                                          </button>
+                                          <ul class="dropdown-menu dropdown-menu-end notification-menu" aria-labelledby="notificationDropdown">
+                                                <li>
+                                                      <h6 class="dropdown-header">Notifications</h6>
+                                                </li>
+                                                <li><a class="dropdown-item" href="#"><i class="fas fa-exclamation-circle text-warning me-2"></i>Low stock alert</a></li>
+                                                <li><a class="dropdown-item" href="#"><i class="fas fa-check-circle text-success me-2"></i>Order completed</a></li>
+                                                <li><a class="dropdown-item" href="#"><i class="fas fa-info-circle text-info me-2"></i>New user registered</a></li>
+                                                <li>
+                                                      <hr class="dropdown-divider">
+                                                </li>
+                                                <li><a class="dropdown-item text-center" href="#">View all notifications</a></li>
+                                          </ul>
+                                    </div>
+                              </div>
+                        </div>
+                  </nav>
+
+                  <!-- Page Content -->
+                  <div class="admin-content">
+                        <!-- Page Header -->
+                        <div class="content-card">
+                              <div class="content-card-header">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                          <div>
+                                                <h1 class="content-card-title">
+                                                      <i class="fas fa-box"></i>
+                                                      Products Management
+                                                </h1>
+                                                <p class="text-muted mb-0">Manage your product inventory, add new products, and track stock levels.</p>
+                                          </div>
+                                          <button class="btn btn-modern btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                                                <i class="fas fa-plus me-2"></i>Add Product
+                                          </button>
+                                    </div>
+                              </div>
+                        </div>
+
+                        <!-- Messages -->
+                        <?php if ($message): ?>
+                              <div class="alert alert-modern alert-success alert-dismissible fade show" role="alert">
+                                    <i class="fas fa-check-circle me-2"></i><?php echo htmlspecialchars($message); ?>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                              </div>
                         <?php endif; ?>
+
+                        <?php if ($error): ?>
+                              <div class="alert alert-modern alert-danger alert-dismissible fade show" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-2"></i><?php echo htmlspecialchars($error); ?>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                              </div>
+                        <?php endif; ?>
+
+                        <!-- Filters and Search -->
+                        <div class="content-card">
+                              <div class="content-card-header">
+                                    <h6 class="content-card-title">
+                                          <i class="fas fa-filter"></i>
+                                          Filters & Search
+                                    </h6>
+                              </div>
+                              <div class="content-card-body">
+                                    <form method="GET" class="row g-3 form-modern">
+                                          <div class="col-md-4">
+                                                <label for="search" class="form-label">Search Products</label>
+                                                <input type="text" class="form-control" id="search" name="search"
+                                                      placeholder="Search by name or description..."
+                                                      value="<?php echo htmlspecialchars($search); ?>">
+                                          </div>
+                                          <div class="col-md-3">
+                                                <label for="category" class="form-label">Category</label>
+                                                <select class="form-select" id="category" name="category">
+                                                      <option value="">All Categories</option>
+                                                      <?php foreach ($categories as $cat): ?>
+                                                            <option value="<?php echo htmlspecialchars($cat); ?>"
+                                                                  <?php echo $category === $cat ? 'selected' : ''; ?>>
+                                                                  <?php echo htmlspecialchars($cat); ?>
+                                                            </option>
+                                                      <?php endforeach; ?>
+                                                </select>
+                                          </div>
+                                          <div class="col-md-2">
+                                                <label for="sort" class="form-label">Sort By</label>
+                                                <select class="form-select" id="sort" name="sort">
+                                                      <option value="id" <?php echo $sort === 'id' ? 'selected' : ''; ?>>ID</option>
+                                                      <option value="name" <?php echo $sort === 'name' ? 'selected' : ''; ?>>Name</option>
+                                                      <option value="price" <?php echo $sort === 'price' ? 'selected' : ''; ?>>Price</option>
+                                                      <option value="stock_quantity" <?php echo $sort === 'stock_quantity' ? 'selected' : ''; ?>>Stock</option>
+                                                      <option value="created_at" <?php echo $sort === 'created_at' ? 'selected' : ''; ?>>Date Added</option>
+                                                </select>
+                                          </div>
+                                          <div class="col-md-2">
+                                                <label for="order" class="form-label">Order</label>
+                                                <select class="form-select" id="order" name="order">
+                                                      <option value="ASC" <?php echo $order === 'ASC' ? 'selected' : ''; ?>>Ascending</option>
+                                                      <option value="DESC" <?php echo $order === 'DESC' ? 'selected' : ''; ?>>Descending</option>
+                                                </select>
+                                          </div>
+                                          <div class="col-md-1">
+                                                <label class="form-label">&nbsp;</label>
+                                                <button type="submit" class="btn btn-modern btn-primary w-100">
+                                                      <i class="fas fa-search"></i>
+                                                </button>
+                                          </div>
+                                    </form>
+                              </div>
+                        </div>
+
+                        <!-- Products Table -->
+                        <div class="content-card">
+                              <div class="content-card-header">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                          <h6 class="content-card-title">
+                                                <i class="fas fa-list"></i>
+                                                Products List
+                                          </h6>
+                                          <div>
+                                                <a href="generate_qr.php" class="btn btn-modern btn-success me-2">
+                                                      <i class="fas fa-qrcode me-1"></i>Generate QR Codes
+                                                </a>
+                                                <button class="btn btn-modern btn-outline-secondary me-2" onclick="exportTable('productsTable', 'products')">
+                                                      <i class="fas fa-download me-1"></i>Export
+                                                </button>
+                                                <button class="btn btn-modern btn-outline-secondary" onclick="printPage()">
+                                                      <i class="fas fa-print me-1"></i>Print
+                                                </button>
+                                          </div>
+                                    </div>
+                              </div>
+                              <div class="content-card-body">
+                                    <div class="table-responsive">
+                                          <table class="table table-modern" id="productsTable" width="100%" cellspacing="0">
+                                                <thead>
+                                                      <tr>
+                                                            <th>ID</th>
+                                                            <th>Image</th>
+                                                            <th>Code</th>
+                                                            <th>Barcode</th>
+                                                            <th>QR Code</th>
+                                                            <th>Name</th>
+                                                            <th>Description</th>
+                                                            <th>Price</th>
+                                                            <th>Discount</th>
+                                                            <th>Stock</th>
+                                                            <th>Category</th>
+                                                            <th>Status</th>
+                                                            <th>Actions</th>
+                                                      </tr>
+                                                </thead>
+                                                <tbody>
+                                                      <?php foreach ($products as $product):
+                                                            $img_path = !empty($product['image_path']) ? '../' . htmlspecialchars($product['image_path']) : '../images/placeholder.jpg';
+                                                      ?>
+                                                            <tr>
+                                                                  <td><?php echo $product['id']; ?></td>
+                                                                  <td>
+                                                                        <img src="<?php echo $img_path; ?>"
+                                                                              alt="<?php echo htmlspecialchars($product['name']); ?>"
+                                                                              class="img-thumbnail" style="width: 50px; height: 50px; object-fit: cover;">
+                                                                  </td>
+                                                                  <td>
+                                                                        <span class="badge bg-info"><?php echo htmlspecialchars($product['product_code'] ?? 'N/A'); ?></span>
+                                                                  </td>
+                                                                  <td>
+                                                                        <span class="badge bg-secondary"><?php echo htmlspecialchars($product['barcode'] ?? 'N/A'); ?></span>
+                                                                  </td>
+                                                                  <td>
+                                                                        <span class="badge bg-dark"><?php echo htmlspecialchars($product['qr_code'] ?? 'N/A'); ?></span>
+                                                                  </td>
+                                                                  <td><?php echo htmlspecialchars($product['name']); ?></td>
+                                                                  <td><?php echo htmlspecialchars(substr($product['description'], 0, 50)) . (strlen($product['description']) > 50 ? '...' : ''); ?></td>
+                                                                  <td>$<?php echo number_format($product['price'], 2); ?></td>
+                                                                  <td>
+                                                                        <?php if ($product['discount_price'] && $product['discount_price'] > 0): ?>
+                                                                              <span class="badge bg-success">$<?php echo number_format($product['discount_price'], 2); ?></span>
+                                                                        <?php else: ?>
+                                                                              <span class="text-muted">-</span>
+                                                                        <?php endif; ?>
+                                                                  </td>
+                                                                  <td>
+                                                                        <span class="badge bg-<?php echo $product['stock_quantity'] < 10 ? 'danger' : ($product['stock_quantity'] < 50 ? 'warning' : 'success'); ?>">
+                                                                              <?php echo $product['stock_quantity']; ?>
+                                                                        </span>
+                                                                  </td>
+                                                                  <td><?php echo htmlspecialchars($product['category'] ?? 'Uncategorized'); ?></td>
+                                                                  <td>
+                                                                        <span class="badge bg-<?php echo $product['stock_quantity'] > 0 ? 'success' : 'danger'; ?>">
+                                                                              <?php echo $product['stock_quantity'] > 0 ? 'In Stock' : 'Out of Stock'; ?>
+                                                                        </span>
+                                                                  </td>
+                                                                  <td>
+                                                                        <div class="btn-group" role="group">
+                                                                              <button class="btn btn-sm btn-primary" onclick="editProduct(<?php echo htmlspecialchars(json_encode($product)); ?>)">
+                                                                                    <i class="fas fa-edit"></i>
+                                                                              </button>
+                                                                              <button class="btn btn-sm btn-danger" onclick="deleteProduct(<?php echo $product['id']; ?>, '<?php echo htmlspecialchars($product['name']); ?>')">
+                                                                                    <i class="fas fa-trash"></i>
+                                                                              </button>
+                                                                        </div>
+                                                                  </td>
+                                                            </tr>
+                                                      <?php endforeach; ?>
+                                                </tbody>
+                                          </table>
+                                    </div>
+
+                                    <!-- Pagination -->
+                                    <?php if ($total_pages > 1): ?>
+                                          <nav aria-label="Products pagination" class="mt-4">
+                                                <ul class="pagination justify-content-center">
+                                                      <?php if ($current_page > 1): ?>
+                                                            <li class="page-item">
+                                                                  <a class="page-link" href="?page=<?php echo $current_page - 1; ?>&search=<?php echo urlencode($search); ?>&category=<?php echo urlencode($category); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
+                                                                        Previous
+                                                                  </a>
+                                                            </li>
+                                                      <?php endif; ?>
+
+                                                      <?php for ($i = max(1, $current_page - 2); $i <= min($total_pages, $current_page + 2); $i++): ?>
+                                                            <li class="page-item <?php echo $i === $current_page ? 'active' : ''; ?>">
+                                                                  <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($search); ?>&category=<?php echo urlencode($category); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
+                                                                        <?php echo $i; ?>
+                                                                  </a>
+                                                            </li>
+                                                      <?php endfor; ?>
+
+                                                      <?php if ($current_page < $total_pages): ?>
+                                                            <li class="page-item">
+                                                                  <a class="page-link" href="?page=<?php echo $current_page + 1; ?>&search=<?php echo urlencode($search); ?>&category=<?php echo urlencode($category); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
+                                                                        Next
+                                                                  </a>
+                                                            </li>
+                                                      <?php endif; ?>
+                                                </ul>
+                                          </nav>
+                                    <?php endif; ?>
+                              </div>
+                        </div>
                   </div>
             </div>
       </div>
 
+      <!-- Bootstrap 5 JS -->
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+      <!-- Custom JS -->
+      <script src="assets/js/admin.js"></script>
+
       <!-- Add Product Modal -->
-      <div class="modal fade" id="addProductModal" tabindex="-1">
+      <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-lg">
                   <div class="modal-content">
                         <div class="modal-header">
-                              <h5 class="modal-title">
-                                    <i class="fas fa-plus me-2"></i>Add New Product
-                              </h5>
-                              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                              <h5 class="modal-title" id="addProductModalLabel">Add New Product</h5>
+                              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <form method="POST" enctype="multipart/form-data">
-                              <input type="hidden" name="action" value="add">
+                        <form method="POST" enctype="multipart/form-data" class="form-modern">
                               <div class="modal-body">
+                                    <input type="hidden" name="action" value="add">
+
                                     <div class="row">
-                                          <div class="col-md-4">
+                                          <div class="col-md-6">
                                                 <div class="mb-3">
                                                       <label for="product_code" class="form-label">Product Code</label>
-                                                      <input type="text" class="form-control" id="product_code" name="product_code"
-                                                            placeholder="e.g., PROD001">
+                                                      <input type="text" class="form-control" id="product_code" name="product_code" placeholder="Enter product code">
                                                 </div>
                                           </div>
-                                          <div class="col-md-4">
-                                                <div class="mb-3">
-                                                      <label for="barcode" class="form-label">Barcode</label>
-                                                      <input type="text" class="form-control" id="barcode" name="barcode"
-                                                            placeholder="Auto-generated or manual">
-                                                      <div class="form-text">Leave empty for auto-generation</div>
-                                                </div>
-                                          </div>
-                                          <div class="col-md-4">
-                                                <div class="mb-3">
-                                                      <label for="qr_code" class="form-label">QR Code</label>
-                                                      <input type="text" class="form-control" id="qr_code" name="qr_code"
-                                                            placeholder="Auto-generated or manual">
-                                                      <div class="form-text">Leave empty for auto-generation</div>
-                                                </div>
-                                          </div>
-                                    </div>
-                                    <div class="row">
-                                          <div class="col-md-12">
+                                          <div class="col-md-6">
                                                 <div class="mb-3">
                                                       <label for="name" class="form-label">Product Name *</label>
-                                                      <input type="text" class="form-control" id="name" name="name" required>
+                                                      <input type="text" class="form-control" id="name" name="name" required placeholder="Enter product name">
                                                 </div>
                                           </div>
                                     </div>
+
+                                    <div class="row">
+                                          <div class="col-md-6">
+                                                <div class="mb-3">
+                                                      <label for="barcode" class="form-label">Barcode</label>
+                                                      <input type="text" class="form-control" id="barcode" name="barcode" placeholder="Enter barcode">
+                                                </div>
+                                          </div>
+                                          <div class="col-md-6">
+                                                <div class="mb-3">
+                                                      <label for="qr_code" class="form-label">QR Code</label>
+                                                      <input type="text" class="form-control" id="qr_code" name="qr_code" placeholder="Enter QR code">
+                                                </div>
+                                          </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                          <label for="description" class="form-label">Description</label>
+                                          <textarea class="form-control" id="description" name="description" rows="3" placeholder="Enter product description"></textarea>
+                                    </div>
+
+                                    <div class="row">
+                                          <div class="col-md-4">
+                                                <div class="mb-3">
+                                                      <label for="price" class="form-label">Price *</label>
+                                                      <div class="input-group">
+                                                            <span class="input-group-text">$</span>
+                                                            <input type="number" class="form-control" id="price" name="price" step="0.01" min="0" required placeholder="0.00">
+                                                      </div>
+                                                </div>
+                                          </div>
+                                          <div class="col-md-4">
+                                                <div class="mb-3">
+                                                      <label for="discount_price" class="form-label">Discount Price</label>
+                                                      <div class="input-group">
+                                                            <span class="input-group-text">$</span>
+                                                            <input type="number" class="form-control" id="discount_price" name="discount_price" step="0.01" min="0" placeholder="0.00">
+                                                      </div>
+                                                </div>
+                                          </div>
+                                          <div class="col-md-4">
+                                                <div class="mb-3">
+                                                      <label for="stock_quantity" class="form-label">Stock Quantity</label>
+                                                      <input type="number" class="form-control" id="stock_quantity" name="stock_quantity" min="0" value="0">
+                                                </div>
+                                          </div>
+                                    </div>
+
                                     <div class="row">
                                           <div class="col-md-6">
                                                 <div class="mb-3">
@@ -604,60 +584,28 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                                       <select class="form-select" id="category" name="category">
                                                             <option value="">Select Category</option>
                                                             <?php foreach ($categories as $cat): ?>
-                                                                  <option value="<?php echo htmlspecialchars($cat); ?>">
-                                                                        <?php echo htmlspecialchars($cat); ?>
-                                                                  </option>
+                                                                  <option value="<?php echo htmlspecialchars($cat); ?>"><?php echo htmlspecialchars($cat); ?></option>
                                                             <?php endforeach; ?>
                                                       </select>
-                                                      <div class="form-text">Or type a new category below</div>
-                                                      <input type="text" class="form-control mt-1" id="new_category" name="new_category"
-                                                            placeholder="Type new category name...">
                                                 </div>
                                           </div>
                                           <div class="col-md-6">
                                                 <div class="mb-3">
-                                                      <label for="stock_quantity" class="form-label">Stock Quantity</label>
-                                                      <input type="number" class="form-control" id="stock_quantity" name="stock_quantity"
-                                                            min="0" value="0">
+                                                      <label for="new_category" class="form-label">Or New Category</label>
+                                                      <input type="text" class="form-control" id="new_category" name="new_category" placeholder="Enter new category">
                                                 </div>
                                           </div>
                                     </div>
-                                    <div class="mb-3">
-                                          <label for="description" class="form-label">Description</label>
-                                          <textarea class="form-control" id="description" name="description" rows="3"></textarea>
-                                    </div>
-                                    <div class="row">
-                                          <div class="col-md-6">
-                                                <div class="mb-3">
-                                                      <label for="price" class="form-label">Price *</label>
-                                                      <div class="input-group">
-                                                            <span class="input-group-text">$</span>
-                                                            <input type="number" class="form-control" id="price" name="price"
-                                                                  step="0.01" min="0" required>
-                                                      </div>
-                                                </div>
-                                          </div>
-                                          <div class="col-md-6">
-                                                <div class="mb-3">
-                                                      <label for="discount_price" class="form-label">Discount Price</label>
-                                                      <div class="input-group">
-                                                            <span class="input-group-text">$</span>
-                                                            <input type="number" class="form-control" id="discount_price" name="discount_price"
-                                                                  step="0.01" min="0" placeholder="Leave empty for no discount">
-                                                      </div>
-                                                </div>
-                                          </div>
-                                    </div>
+
                                     <div class="mb-3">
                                           <label for="image" class="form-label">Product Image</label>
                                           <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                                          <div class="form-text">Upload an image (JPEG, PNG, GIF, WebP) under 5MB.</div>
                                     </div>
                               </div>
                               <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="submit" class="btn btn-primary">
-                                          <i class="fas fa-save me-2"></i>Save Product
-                                    </button>
+                                    <button type="submit" class="btn btn-primary">Add Product</button>
                               </div>
                         </form>
                   </div>
@@ -665,49 +613,80 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
       </div>
 
       <!-- Edit Product Modal -->
-      <div class="modal fade" id="editProductModal" tabindex="-1">
+      <div class="modal fade" id="editProductModal" tabindex="-1" aria-labelledby="editProductModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-lg">
                   <div class="modal-content">
                         <div class="modal-header">
-                              <h5 class="modal-title">
-                                    <i class="fas fa-edit me-2"></i>Edit Product
-                              </h5>
-                              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                              <h5 class="modal-title" id="editProductModalLabel">Edit Product</h5>
+                              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <form method="POST" enctype="multipart/form-data">
-                              <input type="hidden" name="action" value="update">
-                              <input type="hidden" name="id" id="edit_id">
+                        <form method="POST" enctype="multipart/form-data" class="form-modern">
                               <div class="modal-body">
+                                    <input type="hidden" name="action" value="update">
+                                    <input type="hidden" name="id" id="edit_id">
+
                                     <div class="row">
-                                          <div class="col-md-4">
+                                          <div class="col-md-6">
                                                 <div class="mb-3">
                                                       <label for="edit_product_code" class="form-label">Product Code</label>
-                                                      <input type="text" class="form-control" id="edit_product_code" name="product_code">
+                                                      <input type="text" class="form-control" id="edit_product_code" name="product_code" placeholder="Enter product code">
                                                 </div>
                                           </div>
-                                          <div class="col-md-4">
-                                                <div class="mb-3">
-                                                      <label for="edit_barcode" class="form-label">Barcode</label>
-                                                      <input type="text" class="form-control" id="edit_barcode" name="barcode">
-                                                      <div class="form-text">Leave empty for auto-generation</div>
-                                                </div>
-                                          </div>
-                                          <div class="col-md-4">
-                                                <div class="mb-3">
-                                                      <label for="edit_qr_code" class="form-label">QR Code</label>
-                                                      <input type="text" class="form-control" id="edit_qr_code" name="qr_code">
-                                                      <div class="form-text">Leave empty for auto-generation</div>
-                                                </div>
-                                          </div>
-                                    </div>
-                                    <div class="row">
-                                          <div class="col-md-12">
+                                          <div class="col-md-6">
                                                 <div class="mb-3">
                                                       <label for="edit_name" class="form-label">Product Name *</label>
-                                                      <input type="text" class="form-control" id="edit_name" name="name" required>
+                                                      <input type="text" class="form-control" id="edit_name" name="name" required placeholder="Enter product name">
                                                 </div>
                                           </div>
                                     </div>
+
+                                    <div class="row">
+                                          <div class="col-md-6">
+                                                <div class="mb-3">
+                                                      <label for="edit_barcode" class="form-label">Barcode</label>
+                                                      <input type="text" class="form-control" id="edit_barcode" name="barcode" placeholder="Enter barcode">
+                                                </div>
+                                          </div>
+                                          <div class="col-md-6">
+                                                <div class="mb-3">
+                                                      <label for="edit_qr_code" class="form-label">QR Code</label>
+                                                      <input type="text" class="form-control" id="edit_qr_code" name="qr_code" placeholder="Enter QR code">
+                                                </div>
+                                          </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                          <label for="edit_description" class="form-label">Description</label>
+                                          <textarea class="form-control" id="edit_description" name="description" rows="3" placeholder="Enter product description"></textarea>
+                                    </div>
+
+                                    <div class="row">
+                                          <div class="col-md-4">
+                                                <div class="mb-3">
+                                                      <label for="edit_price" class="form-label">Price *</label>
+                                                      <div class="input-group">
+                                                            <span class="input-group-text">$</span>
+                                                            <input type="number" class="form-control" id="edit_price" name="price" step="0.01" min="0" required placeholder="0.00">
+                                                      </div>
+                                                </div>
+                                          </div>
+                                          <div class="col-md-4">
+                                                <div class="mb-3">
+                                                      <label for="edit_discount_price" class="form-label">Discount Price</label>
+                                                      <div class="input-group">
+                                                            <span class="input-group-text">$</span>
+                                                            <input type="number" class="form-control" id="edit_discount_price" name="discount_price" step="0.01" min="0" placeholder="0.00">
+                                                      </div>
+                                                </div>
+                                          </div>
+                                          <div class="col-md-4">
+                                                <div class="mb-3">
+                                                      <label for="edit_stock_quantity" class="form-label">Stock Quantity</label>
+                                                      <input type="number" class="form-control" id="edit_stock_quantity" name="stock_quantity" min="0" value="0">
+                                                </div>
+                                          </div>
+                                    </div>
+
                                     <div class="row">
                                           <div class="col-md-6">
                                                 <div class="mb-3">
@@ -715,240 +694,79 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                                       <select class="form-select" id="edit_category" name="category">
                                                             <option value="">Select Category</option>
                                                             <?php foreach ($categories as $cat): ?>
-                                                                  <option value="<?php echo htmlspecialchars($cat); ?>">
-                                                                        <?php echo htmlspecialchars($cat); ?>
-                                                                  </option>
+                                                                  <option value="<?php echo htmlspecialchars($cat); ?>"><?php echo htmlspecialchars($cat); ?></option>
                                                             <?php endforeach; ?>
                                                       </select>
-                                                      <div class="form-text">Or type a new category below</div>
-                                                      <input type="text" class="form-control mt-1" id="edit_new_category" name="new_category"
-                                                            placeholder="Type new category name...">
                                                 </div>
                                           </div>
                                           <div class="col-md-6">
                                                 <div class="mb-3">
-                                                      <label for="edit_stock_quantity" class="form-label">Stock Quantity</label>
-                                                      <input type="number" class="form-control" id="edit_stock_quantity" name="stock_quantity"
-                                                            min="0">
+                                                      <label for="edit_new_category" class="form-label">Or New Category</label>
+                                                      <input type="text" class="form-control" id="edit_new_category" name="new_category" placeholder="Enter new category">
                                                 </div>
                                           </div>
                                     </div>
-                                    <div class="mb-3">
-                                          <label for="edit_description" class="form-label">Description</label>
-                                          <textarea class="form-control" id="edit_description" name="description" rows="3"></textarea>
-                                    </div>
-                                    <div class="row">
-                                          <div class="col-md-6">
-                                                <div class="mb-3">
-                                                      <label for="edit_price" class="form-label">Price *</label>
-                                                      <div class="input-group">
-                                                            <span class="input-group-text">$</span>
-                                                            <input type="number" class="form-control" id="edit_price" name="price"
-                                                                  step="0.01" min="0" required>
-                                                      </div>
-                                                </div>
-                                          </div>
-                                          <div class="col-md-6">
-                                                <div class="mb-3">
-                                                      <label for="edit_discount_price" class="form-label">Discount Price</label>
-                                                      <div class="input-group">
-                                                            <span class="input-group-text">$</span>
-                                                            <input type="number" class="form-control" id="edit_discount_price" name="discount_price"
-                                                                  step="0.01" min="0" placeholder="Leave empty for no discount">
-                                                      </div>
-                                                </div>
-                                          </div>
-                                    </div>
+
                                     <div class="mb-3">
                                           <label for="edit_image" class="form-label">Product Image</label>
-                                          <div id="current_image_preview" class="mb-2" style="display: none;">
-                                                <img id="current_image" src="" alt="Current product image" class="img-thumbnail" style="max-width: 150px; max-height: 150px;">
-                                                <div class="form-text">Current image</div>
-                                          </div>
                                           <input type="file" class="form-control" id="edit_image" name="image" accept="image/*">
-                                          <div class="form-text">Leave empty to keep current image</div>
-                                          <div id="new_image_preview" class="mt-2" style="display: none;">
-                                                <img id="preview_image" src="" alt="New image preview" class="img-thumbnail" style="max-width: 150px; max-height: 150px;">
-                                                <div class="form-text">New image preview</div>
-                                          </div>
+                                          <div class="form-text">Upload an image (JPEG, PNG, GIF, WebP) under 5MB. Leave empty to keep current image.</div>
                                     </div>
                               </div>
                               <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="submit" class="btn btn-primary">
-                                          <i class="fas fa-save me-2"></i>Update Product
-                                    </button>
+                                    <button type="submit" class="btn btn-primary">Update Product</button>
                               </div>
                         </form>
                   </div>
             </div>
       </div>
 
-      <!-- Delete Product Form -->
-      <form id="deleteProductForm" method="POST" style="display: none;">
-            <input type="hidden" name="action" value="delete">
-            <input type="hidden" name="id" id="delete_id">
-      </form>
-
-      <!-- Bootstrap 5 JS -->
-      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-      <!-- Custom JS -->
-      <script src="assets/js/admin.js"></script>
-
       <script>
             function editProduct(product) {
                   document.getElementById('edit_id').value = product.id;
                   document.getElementById('edit_product_code').value = product.product_code || '';
+                  document.getElementById('edit_name').value = product.name;
                   document.getElementById('edit_barcode').value = product.barcode || '';
                   document.getElementById('edit_qr_code').value = product.qr_code || '';
-                  document.getElementById('edit_name').value = product.name;
-                  document.getElementById('edit_description').value = product.description;
+                  document.getElementById('edit_description').value = product.description || '';
                   document.getElementById('edit_price').value = product.price;
                   document.getElementById('edit_discount_price').value = product.discount_price || '';
                   document.getElementById('edit_stock_quantity').value = product.stock_quantity;
+                  document.getElementById('edit_category').value = product.category || '';
 
-                  // Handle category dropdown
-                  const categorySelect = document.getElementById('edit_category');
-                  const newCategoryInput = document.getElementById('edit_new_category');
-
-                  if (product.category && product.category.trim() !== '') {
-                        // Check if category exists in dropdown
-                        let categoryExists = false;
-                        for (let option of categorySelect.options) {
-                              if (option.value === product.category) {
-                                    categorySelect.value = product.category;
-                                    categoryExists = true;
-                                    break;
-                              }
-                        }
-
-                        // If category doesn't exist in dropdown, put it in new category input
-                        if (!categoryExists) {
-                              categorySelect.value = '';
-                              newCategoryInput.value = product.category;
-                        } else {
-                              newCategoryInput.value = '';
-                        }
-                  } else {
-                        categorySelect.value = '';
-                        newCategoryInput.value = '';
-                  }
-
-                  // Handle image preview
-                  const currentImagePreview = document.getElementById('current_image_preview');
-                  const currentImage = document.getElementById('current_image');
-                  const newImagePreview = document.getElementById('new_image_preview');
-                  const previewImage = document.getElementById('preview_image');
-
-                  if (product.image_path && product.image_path.trim() !== '') {
-                        currentImage.src = '../' + product.image_path;
-                        currentImagePreview.style.display = 'block';
-                  } else {
-                        currentImagePreview.style.display = 'none';
-                  }
-
-                  newImagePreview.style.display = 'none';
-
-                  new bootstrap.Modal(document.getElementById('editProductModal')).show();
+                  const editModal = new bootstrap.Modal(document.getElementById('editProductModal'));
+                  editModal.show();
             }
 
-            function deleteProduct(id) {
-                  if (confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
-                        document.getElementById('delete_id').value = id;
-                        document.getElementById('deleteProductForm').submit();
+            function deleteProduct(id, name) {
+                  if (confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.innerHTML = `
+                              <input type="hidden" name="action" value="delete">
+                              <input type="hidden" name="id" value="${id}">
+                        `;
+                        document.body.appendChild(form);
+                        form.submit();
                   }
             }
 
-            // Handle category selection logic
-            document.addEventListener('DOMContentLoaded', function() {
-                  // Add Product Modal
-                  const categorySelect = document.getElementById('category');
-                  const newCategoryInput = document.getElementById('new_category');
+            function exportTable(tableId, filename) {
+                  const table = document.getElementById(tableId);
+                  const html = table.outerHTML;
+                  const url = 'data:application/vnd.ms-excel,' + encodeURIComponent(html);
+                  const downloadLink = document.createElement("a");
+                  document.body.appendChild(downloadLink);
+                  downloadLink.href = url;
+                  downloadLink.download = filename + '.xls';
+                  downloadLink.click();
+                  document.body.removeChild(downloadLink);
+            }
 
-                  if (categorySelect && newCategoryInput) {
-                        categorySelect.addEventListener('change', function() {
-                              if (this.value) {
-                                    newCategoryInput.value = '';
-                              }
-                        });
-
-                        newCategoryInput.addEventListener('input', function() {
-                              if (this.value) {
-                                    categorySelect.value = '';
-                              }
-                        });
-                  }
-
-                  // Edit Product Modal
-                  const editCategorySelect = document.getElementById('edit_category');
-                  const editNewCategoryInput = document.getElementById('edit_new_category');
-
-                  if (editCategorySelect && editNewCategoryInput) {
-                        editCategorySelect.addEventListener('change', function() {
-                              if (this.value) {
-                                    editNewCategoryInput.value = '';
-                              }
-                        });
-
-                        editNewCategoryInput.addEventListener('input', function() {
-                              if (this.value) {
-                                    editCategorySelect.value = '';
-                              }
-                        });
-                  }
-
-                  // Handle image preview for edit modal
-                  const editImageInput = document.getElementById('edit_image');
-                  if (editImageInput) {
-                        editImageInput.addEventListener('change', function() {
-                              const file = this.files[0];
-                              const newImagePreview = document.getElementById('new_image_preview');
-                              const previewImage = document.getElementById('preview_image');
-
-                              if (file) {
-                                    const reader = new FileReader();
-                                    reader.onload = function(e) {
-                                          previewImage.src = e.target.result;
-                                          newImagePreview.style.display = 'block';
-                                    };
-                                    reader.readAsDataURL(file);
-                              } else {
-                                    newImagePreview.style.display = 'none';
-                              }
-                        });
-                  }
-
-                  // Handle image preview for add modal
-                  const addImageInput = document.getElementById('image');
-                  if (addImageInput) {
-                        addImageInput.addEventListener('change', function() {
-                              const file = this.files[0];
-                              if (file) {
-                                    // Create preview element if it doesn't exist
-                                    let previewDiv = document.getElementById('add_image_preview');
-                                    if (!previewDiv) {
-                                          previewDiv = document.createElement('div');
-                                          previewDiv.id = 'add_image_preview';
-                                          previewDiv.className = 'mt-2';
-                                          previewDiv.innerHTML = '<img id="add_preview_image" src="" alt="Image preview" class="img-thumbnail" style="max-width: 150px; max-height: 150px;"><div class="form-text">Image preview</div>';
-                                          addImageInput.parentNode.appendChild(previewDiv);
-                                    }
-
-                                    const reader = new FileReader();
-                                    reader.onload = function(e) {
-                                          document.getElementById('add_preview_image').src = e.target.result;
-                                          previewDiv.style.display = 'block';
-                                    };
-                                    reader.readAsDataURL(file);
-                              } else {
-                                    const previewDiv = document.getElementById('add_image_preview');
-                                    if (previewDiv) {
-                                          previewDiv.style.display = 'none';
-                                    }
-                              }
-                        });
-                  }
-            });
+            function printPage() {
+                  window.print();
+            }
       </script>
 </body>
 
