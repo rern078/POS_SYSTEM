@@ -141,6 +141,16 @@
       color: white;
 }
 
+.product-card-click-area {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 1;
+      cursor: pointer;
+}
+
 .product-image-container {
       position: relative;
       overflow: hidden;
@@ -160,46 +170,62 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(255, 255, 255, 0.95);
+      background: rgba(255, 255, 255, 0.98);
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       z-index: 10;
       border-radius: 12px;
-      backdrop-filter: blur(5px);
+      backdrop-filter: blur(8px);
       transition: all 0.3s ease;
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.05);
 }
 
 .quantity-controls {
       display: flex;
       align-items: center;
-      gap: 15px;
-      margin-bottom: 15px;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .quantity-display {
       font-size: 1.5rem;
       font-weight: bold;
       color: #333;
-      min-width: 40px;
+      min-width: 60px;
       text-align: center;
       background: #f8f9fa;
       padding: 8px 12px;
       border-radius: 8px;
       border: 2px solid #dee2e6;
-      font-weight: bold;
       color: #495057;
+      display: inline-block;
+      margin: 0 10px;
 }
 
 .quantity-actions {
       display: flex;
       gap: 10px;
+      justify-content: center;
 }
 
 .quantity-actions .btn {
-      padding: 8px 16px;
+      padding: 10px 20px;
       font-size: 0.9rem;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+}
+
+.quantity-actions .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .product-card:hover .quantity-overlay {
@@ -207,25 +233,28 @@
 }
 
 .quantity-controls .quantity-btn {
-      width: 40px;
-      height: 40px;
+      width: 45px;
+      height: 45px;
       border: none;
       background: #007bff;
       color: white;
       border-radius: 50%;
       cursor: pointer;
-      font-size: 1.2rem;
+      font-size: 1.3rem;
       font-weight: bold;
       transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
 }
 
 .quantity-controls .quantity-btn:hover {
       background: #0056b3;
       transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
 }
 
 .quantity-controls .quantity-btn:active {
       transform: scale(0.95);
+      box-shadow: 0 1px 4px rgba(0, 123, 255, 0.3);
 }
 
 /* Responsive Design */
@@ -233,5 +262,32 @@
       .cart-sidebar {
             width: 100%;
             right: -100%;
+      }
+      
+      .quantity-controls {
+            flex-direction: column;
+            gap: 15px;
+      }
+      
+      .quantity-display {
+            min-width: 80px;
+            font-size: 1.8rem;
+            padding: 12px 16px;
+      }
+      
+      .quantity-controls .quantity-btn {
+            width: 50px;
+            height: 50px;
+            font-size: 1.5rem;
+      }
+      
+      .quantity-actions {
+            flex-direction: column;
+            gap: 8px;
+      }
+      
+      .quantity-actions .btn {
+            width: 100%;
+            padding: 12px 20px;
       }
 }

@@ -44,47 +44,34 @@ $order_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 if ($is_ajax) {
 ?>
       <div class="receipt-container" style="max-width: 100%; border: none; box-shadow: none;">
-            <!-- Order Information -->
-            <div class="mb-3">
-                  <div class="row">
-                        <div class="col-6">
-                              <strong>Order #:</strong> <?php echo $order_id; ?>
-                        </div>
-                        <div class="col-6 text-end">
-                              <strong>Date:</strong> <?php echo date('M d, Y', strtotime($order['created_at'])); ?>
-                        </div>
+            <div class="row">
+                  <div class="col-md-6">
+                        <h6>Order Information</h6>
+                        <table class="table table-sm">
+                              <tr><td><strong>Order ID:</strong></td><td>#<?php echo $order_id; ?></td></tr>
+                              <tr><td><strong>Date:</strong></td><td><?php echo date('M d, Y', strtotime($order['created_at'])); ?></td></tr>
+                              <tr><td><strong>Time:</strong></td><td><?php echo date('H:i A', strtotime($order['created_at'])); ?></td></tr>
+                              <tr><td><strong>Status:</strong></td><td><span class="badge bg-<?php echo $order['status'] === 'completed' ? 'success' : ($order['status'] === 'pending' ? 'warning' : 'danger'); ?>"><?php echo ucfirst($order['status']); ?></span></td></tr>
+                              <tr><td><strong>Payment Method:</strong></td><td><?php echo ucfirst($order['payment_method']); ?></td></tr>
+                        </table>
                   </div>
-                  <div class="row">
-                        <div class="col-6">
-                              <strong>Time:</strong> <?php echo date('H:i A', strtotime($order['created_at'])); ?>
-                        </div>
-                        <div class="col-6 text-end">
-                              <strong>Cashier:</strong> <?php echo htmlspecialchars($_SESSION['username']); ?>
-                        </div>
+                  <div class="col-md-6">
+                        <h6>Customer Information</h6>
+                        <table class="table table-sm">
+                              <tr><td><strong>Name:</strong></td><td><?php echo htmlspecialchars($order['customer_name'] ?: 'Walk-in Customer'); ?></td></tr>
+                              <tr><td><strong>Email:</strong></td><td><?php echo htmlspecialchars($order['customer_email'] ?: 'N/A'); ?></td></tr>
+                              <tr><td><strong>Cashier:</strong></td><td><?php echo htmlspecialchars($_SESSION['username']); ?></td></tr>
+                        </table>
                   </div>
-                  <?php if ($order['customer_name']): ?>
-                        <div class="row">
-                              <div class="col-12">
-                                    <strong>Customer:</strong> <?php echo htmlspecialchars($order['customer_name']); ?>
-                              </div>
-                        </div>
-                  <?php endif; ?>
-                  <?php if ($order['customer_email']): ?>
-                        <div class="row">
-                              <div class="col-12">
-                                    <strong>Email:</strong> <?php echo htmlspecialchars($order['customer_email']); ?>
-                              </div>
-                        </div>
-                  <?php endif; ?>
             </div>
-
-            <!-- Items Table -->
+            
+            <h6 class="mt-4">Order Items</h6>
             <div class="table-responsive">
                   <table class="table table-sm">
                         <thead>
                               <tr>
-                                    <th>Item</th>
-                                    <th class="text-center">Qty</th>
+                                    <th>Product</th>
+                                    <th class="text-center">Quantity</th>
                                     <th class="text-end">Price</th>
                                     <th class="text-end">Total</th>
                               </tr>
@@ -93,8 +80,13 @@ if ($is_ajax) {
                               <?php foreach ($order_items as $item): ?>
                                     <tr>
                                           <td>
-                                                <?php echo htmlspecialchars($item['product_name']); ?>
-                                                <br><small class="text-muted"><?php echo htmlspecialchars($item['product_code']); ?></small>
+                                                <div class="d-flex align-items-center">
+                                                      <img src="../<?php echo $item['image_path'] ?: 'images/placeholder.jpg'; ?>" alt="<?php echo htmlspecialchars($item['product_name']); ?>" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" class="me-2">
+                                                      <div>
+                                                            <strong><?php echo htmlspecialchars($item['product_name']); ?></strong><br>
+                                                            <small class="text-muted"><?php echo htmlspecialchars($item['product_code']); ?></small>
+                                                      </div>
+                                                </div>
                                           </td>
                                           <td class="text-center"><?php echo $item['quantity']; ?></td>
                                           <td class="text-end">$<?php echo number_format($item['price'], 2); ?></td>
@@ -109,28 +101,6 @@ if ($is_ajax) {
                               </tr>
                         </tfoot>
                   </table>
-            </div>
-
-            <!-- Payment Information -->
-            <div class="mt-3">
-                  <div class="row">
-                        <div class="col-6">
-                              <strong>Payment Method:</strong>
-                        </div>
-                        <div class="col-6 text-end">
-                              <?php echo ucfirst($order['payment_method']); ?>
-                        </div>
-                  </div>
-                  <div class="row">
-                        <div class="col-6">
-                              <strong>Status:</strong>
-                        </div>
-                        <div class="col-6 text-end">
-                              <span class="badge bg-<?php echo $order['status'] === 'completed' ? 'success' : 'warning'; ?>">
-                                    <?php echo ucfirst($order['status']); ?>
-                              </span>
-                        </div>
-                  </div>
             </div>
       </div>
 <?php

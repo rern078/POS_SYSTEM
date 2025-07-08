@@ -18,6 +18,333 @@
       --transition: all 0.3s ease;
 }
 
+/* Login Page Styles */
+.bg-gradient-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 0;
+}
+
+.bg-login-image {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%),
+            url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/><circle cx="10" cy="60" r="0.5" fill="white" opacity="0.1"/><circle cx="90" cy="40" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+      background-size: cover;
+      background-position: center;
+      position: relative;
+}
+
+.bg-login-image::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(45deg, rgba(78, 115, 223, 0.1) 0%, rgba(34, 74, 190, 0.1) 100%);
+      z-index: 1;
+}
+
+.login-card {
+      background: white;
+      border-radius: 1.5rem;
+      box-shadow:
+            0 2rem 4rem rgba(0, 0, 0, 0.1),
+            0 0.5rem 1rem rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+      border: none;
+      backdrop-filter: blur(10px);
+}
+
+.login-card .card-body {
+      padding: 0;
+}
+
+.login-form-container {
+      padding: 3rem 2.5rem;
+}
+
+.login-title {
+      color: var(--dark-color);
+      font-weight: 700;
+      font-size: 1.5rem;
+      margin-bottom: 2rem;
+      text-align: center;
+}
+
+.login-title i {
+      color: var(--primary-color);
+      margin-right: 0.5rem;
+}
+
+.form-control-user {
+      border-radius: 1rem;
+      padding: 0.875rem 1.25rem;
+      border: none;
+      background: linear-gradient(145deg, #f8f9fc, #e9ecef);
+      box-shadow:
+            inset 3px 3px 6px rgba(0, 0, 0, 0.08),
+            inset -3px -3px 6px rgba(255, 255, 255, 0.9);
+      transition: all 0.3s ease;
+      font-size: 0.9rem;
+      color: var(--dark-color);
+      font-weight: 500;
+}
+
+.form-control-user:focus {
+      outline: none;
+      background: linear-gradient(145deg, #ffffff, #f8f9fc);
+      box-shadow:
+            inset 2px 2px 4px rgba(0, 0, 0, 0.05),
+            inset -2px -2px 4px rgba(255, 255, 255, 1),
+            0 0 0 3px rgba(78, 115, 223, 0.15);
+      color: var(--dark-color);
+      transform: translateY(-1px);
+}
+
+.form-control-user::placeholder {
+      color: #adb5bd;
+      font-weight: 400;
+}
+
+.input-group-text {
+      background: linear-gradient(145deg, #f8f9fc, #e9ecef);
+      border: none;
+      border-radius: 1rem 0 0 1rem;
+      color: var(--secondary-color);
+      box-shadow:
+            inset 3px 3px 6px rgba(0, 0, 0, 0.08),
+            inset -3px -3px 6px rgba(255, 255, 255, 0.9);
+      padding: 0.875rem 1rem;
+      font-weight: 500;
+}
+
+.input-group .form-control-user {
+      border-radius: 0 1rem 1rem 0;
+      margin-left: -1px;
+}
+
+.form-select.form-control-user {
+      border-radius: 1rem;
+      padding: 0.875rem 1.25rem;
+      border: none;
+      background: linear-gradient(145deg, #f8f9fc, #e9ecef);
+      box-shadow:
+            inset 3px 3px 6px rgba(0, 0, 0, 0.08),
+            inset -3px -3px 6px rgba(255, 255, 255, 0.9);
+      transition: all 0.3s ease;
+      font-size: 0.9rem;
+      color: var(--dark-color);
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%236c757d' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m1 6 7 7 7-7'/%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+      background-size: 16px 12px;
+      padding-right: 2.5rem;
+      font-weight: 500;
+}
+
+.form-select.form-control-user:focus {
+      outline: none;
+      background: linear-gradient(145deg, #ffffff, #f8f9fc);
+      box-shadow:
+            inset 2px 2px 4px rgba(0, 0, 0, 0.05),
+            inset -2px -2px 4px rgba(255, 255, 255, 1),
+            0 0 0 3px rgba(78, 115, 223, 0.15);
+      color: var(--dark-color);
+      transform: translateY(-1px);
+}
+
+.input-group .form-select.form-control-user {
+      border-radius: 0 1rem 1rem 0;
+      margin-left: -1px;
+}
+
+.btn-user {
+      padding: 0.875rem 2.5rem;
+      background: linear-gradient(145deg, #4e73df, #224abe);
+      color: white;
+      font-weight: 600;
+      font-size: 1rem;
+      border: none;
+      border-radius: 1rem;
+      box-shadow:
+            0 4px 8px rgba(78, 115, 223, 0.3),
+            inset 2px 2px 4px rgba(255, 255, 255, 0.2),
+            inset -2px -2px 4px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      text-decoration: none;
+      position: relative;
+      overflow: hidden;
+}
+
+.btn-user::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+}
+
+.btn-user:hover {
+      background: linear-gradient(145deg, #224abe, #4e73df);
+      box-shadow:
+            0 6px 12px rgba(78, 115, 223, 0.4),
+            inset 1px 1px 2px rgba(255, 255, 255, 0.3),
+            inset -1px -1px 2px rgba(0, 0, 0, 0.05);
+      transform: translateY(-2px);
+      color: white;
+}
+
+.btn-user:hover::before {
+      left: 100%;
+}
+
+.btn-user:active {
+      transform: translateY(0);
+      box-shadow:
+            0 2px 4px rgba(78, 115, 223, 0.3),
+            inset 3px 3px 6px rgba(0, 0, 0, 0.1),
+            inset -1px -1px 2px rgba(255, 255, 255, 0.1);
+}
+
+.btn-user:focus {
+      outline: none;
+      box-shadow:
+            0 4px 8px rgba(78, 115, 223, 0.3),
+            inset 2px 2px 4px rgba(255, 255, 255, 0.2),
+            inset -2px -2px 4px rgba(0, 0, 0, 0.1),
+            0 0 0 3px rgba(78, 115, 223, 0.25);
+}
+
+.custom-control-input:checked~.custom-control-label::before {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+      box-shadow:
+            inset 1px 1px 2px rgba(0, 0, 0, 0.1),
+            inset -1px -1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.form-check-input:checked {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+      box-shadow:
+            inset 1px 1px 2px rgba(0, 0, 0, 0.1),
+            inset -1px -1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.form-check-input {
+      border-radius: 0.25rem;
+      box-shadow:
+            inset 1px 1px 2px rgba(0, 0, 0, 0.05),
+            inset -1px -1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.form-check-label {
+      color: var(--secondary-color);
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-weight: 500;
+}
+
+.login-links {
+      margin-top: 1.5rem;
+}
+
+.login-links a {
+      color: var(--primary-color);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      background: linear-gradient(145deg, #f8f9fc, #e9ecef);
+      box-shadow:
+            inset 1px 1px 2px rgba(0, 0, 0, 0.05),
+            inset -1px -1px 2px rgba(255, 255, 255, 0.8);
+      display: inline-block;
+      margin: 0.25rem;
+}
+
+.login-links a:hover {
+      color: var(--primary-dark);
+      background: linear-gradient(145deg, #e9ecef, #f8f9fc);
+      box-shadow:
+            inset 2px 2px 4px rgba(0, 0, 0, 0.08),
+            inset -2px -2px 4px rgba(255, 255, 255, 0.9);
+      transform: translateY(-1px);
+      text-decoration: none;
+}
+
+.login-credentials {
+      background: linear-gradient(145deg, #f8f9fc, #e9ecef);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      margin-top: 1.5rem;
+      border-left: 4px solid var(--primary-color);
+      box-shadow:
+            inset 2px 2px 4px rgba(0, 0, 0, 0.05),
+            inset -2px -2px 4px rgba(255, 255, 255, 0.8);
+}
+
+.login-credentials strong {
+      color: var(--dark-color);
+      font-size: 0.85rem;
+      font-weight: 600;
+}
+
+.login-credentials small {
+      color: var(--secondary-color);
+      font-size: 0.8rem;
+      line-height: 1.4;
+      font-weight: 500;
+}
+
+/* Alert styling for login/register */
+.alert {
+      border: none;
+      border-radius: 0.75rem;
+      padding: 1rem 1.25rem;
+      font-weight: 500;
+      box-shadow:
+            inset 1px 1px 2px rgba(0, 0, 0, 0.05),
+            inset -1px -1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.alert-danger {
+      background: linear-gradient(145deg, #f8d7da, #f5c6cb);
+      color: #721c24;
+}
+
+.alert-success {
+      background: linear-gradient(145deg, #d4edda, #c3e6cb);
+      color: #155724;
+}
+
+@media (max-width: 768px) {
+      .bg-login-image {
+            display: none;
+      }
+
+      .login-form-container {
+            padding: 2rem 1.5rem;
+      }
+
+      .login-title {
+            font-size: 1.25rem;
+      }
+
+      .btn-user {
+            padding: 0.75rem 2rem;
+            font-size: 0.9rem;
+      }
+}
+
 * {
       margin: 0;
       padding: 0;

@@ -238,7 +238,7 @@ $payment_methods = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                       <i class="fas fa-list"></i>
                                                       Recent Sales
                                                 </h6>
-                                                <a href="#" class="btn btn-modern btn-primary btn-sm">
+                                                <a href="orders.php" class="btn btn-modern btn-primary btn-sm">
                                                       <i class="fas fa-eye me-1"></i>View All
                                                 </a>
                                           </div>
@@ -302,10 +302,10 @@ $payment_methods = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                                                               </td>
                                                                               <td>
                                                                                     <div class="btn-group btn-group-sm">
-                                                                                          <button class="btn btn-outline-primary" title="View Details">
+                                                                                          <button class="btn btn-outline-primary" onclick="viewOrderDetails(<?php echo $sale['id']; ?>)" title="View Details">
                                                                                                 <i class="fas fa-eye"></i>
                                                                                           </button>
-                                                                                          <button class="btn btn-outline-success" title="Mark Complete">
+                                                                                          <button class="btn btn-outline-success" onclick="updateOrderStatus(<?php echo $sale['id']; ?>, 'completed')" title="Mark Complete">
                                                                                                 <i class="fas fa-check"></i>
                                                                                           </button>
                                                                                     </div>
@@ -318,6 +318,27 @@ $payment_methods = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                           </div>
                                     </div>
                               </div>
+                        </div>
+                  </div>
+            </div>
+      </div>
+
+      <!-- Order Details Modal -->
+      <div class="modal fade" id="orderDetailsModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                  <div class="modal-content">
+                        <div class="modal-header">
+                              <h5 class="modal-title">Order Details</h5>
+                              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body" id="orderDetailsContent">
+                              <!-- Content will be loaded here -->
+                        </div>
+                        <div class="modal-footer">
+                              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                              <button type="button" class="btn btn-primary" id="printReceiptBtn">
+                                    <i class="fas fa-print me-2"></i>Print Receipt
+                              </button>
                         </div>
                   </div>
             </div>
@@ -406,6 +427,155 @@ $payment_methods = $stmt->fetchAll(PDO::FETCH_ASSOC);
                   // Here you would typically make an AJAX call to get new data
                   // For now, we'll just show a message
                   alert('Chart would update for ' + period + ' period');
+            }
+
+            function viewOrderDetails(orderId) {
+                  // Show loading
+                  document.getElementById('orderDetailsContent').innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Loading order details...</p></div>';
+
+                  // Load order details via AJAX
+                  fetch('orders.php', {
+                              method: 'POST',
+                              headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                              },
+                              body: `action=get_order_details&order_id=${orderId}`
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                              if (data.success) {
+                                    const order = data.order;
+                                    const items = data.items;
+
+                                    let html = `
+                                    <div class="row">
+                                          <div class="col-md-6">
+                                                <h6>Order Information</h6>
+                                                <table class="table table-sm">
+                                                      <tr><td><strong>Order ID:</strong></td><td>#${order.id}</td></tr>
+                                                      <tr><td><strong>Date:</strong></td><td>${new Date(order.created_at).toLocaleDateString()}</td></tr>
+                                                      <tr><td><strong>Time:</strong></td><td>${new Date(order.created_at).toLocaleTimeString()}</td></tr>
+                                                      <tr><td><strong>Status:</strong></td><td><span class="badge bg-${order.status === 'completed' ? 'success' : (order.status === 'pending' ? 'warning' : 'danger')}">${order.status.charAt(0).toUpperCase() + order.status.slice(1)}</span></td></tr>
+                                                      <tr><td><strong>Payment Method:</strong></td><td>${order.payment_method.charAt(0).toUpperCase() + order.payment_method.slice(1)}</td></tr>
+                                                </table>
+                                          </div>
+                                          <div class="col-md-6">
+                                                <h6>Customer Information</h6>
+                                                <table class="table table-sm">
+                                                      <tr><td><strong>Name:</strong></td><td>${order.customer_name || 'Walk-in Customer'}</td></tr>
+                                                      <tr><td><strong>Email:</strong></td><td>${order.customer_email || 'N/A'}</td></tr>
+                                                </table>
+                                          </div>
+                                    </div>
+                                    
+                                    <h6 class="mt-4">Order Items</h6>
+                                    <div class="table-responsive">
+                                          <table class="table table-sm">
+                                                <thead>
+                                                      <tr>
+                                                            <th>Product</th>
+                                                            <th class="text-center">Quantity</th>
+                                                            <th class="text-end">Price</th>
+                                                            <th class="text-end">Total</th>
+                                                      </tr>
+                                                </thead>
+                                                <tbody>`;
+
+                                    items.forEach(item => {
+                                          html += `
+                                          <tr>
+                                                <td>
+                                                      <div class="d-flex align-items-center">
+                                                            <img src="../${item.image_path || 'images/placeholder.jpg'}" alt="${item.product_name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" class="me-2">
+                                                            <div>
+                                                                  <strong>${item.product_name}</strong><br>
+                                                                  <small class="text-muted">${item.product_code}</small>
+                                                            </div>
+                                                      </div>
+                                                </td>
+                                                <td class="text-center">${item.quantity}</td>
+                                                <td class="text-end">$${parseFloat(item.price).toFixed(2)}</td>
+                                                <td class="text-end">$${(item.price * item.quantity).toFixed(2)}</td>
+                                          </tr>`;
+                                    });
+
+                                    html += `
+                                                </tbody>
+                                                <tfoot>
+                                                      <tr class="table-active">
+                                                            <th colspan="3">TOTAL</th>
+                                                            <th class="text-end">$${parseFloat(order.total_amount).toFixed(2)}</th>
+                                                      </tr>
+                                                </tfoot>
+                                          </table>
+                                    </div>`;
+
+                                    document.getElementById('orderDetailsContent').innerHTML = html;
+
+                                    // Set up print button
+                                    document.getElementById('printReceiptBtn').onclick = function() {
+                                          window.open(`../user/receipt.php?order_id=${orderId}`, '_blank');
+                                    };
+
+                                    new bootstrap.Modal(document.getElementById('orderDetailsModal')).show();
+                              } else {
+                                    document.getElementById('orderDetailsContent').innerHTML = '<div class="alert alert-danger">Error loading order details: ' + data.message + '</div>';
+                                    new bootstrap.Modal(document.getElementById('orderDetailsModal')).show();
+                              }
+                        })
+                        .catch(error => {
+                              document.getElementById('orderDetailsContent').innerHTML = '<div class="alert alert-danger">Error loading order details</div>';
+                              new bootstrap.Modal(document.getElementById('orderDetailsModal')).show();
+                        });
+            }
+
+            function updateOrderStatus(orderId, status) {
+                  if (!confirm(`Are you sure you want to mark this order as ${status}?`)) {
+                        return;
+                  }
+
+                  fetch('orders.php', {
+                              method: 'POST',
+                              headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                              },
+                              body: `action=update_status&order_id=${orderId}&status=${status}`
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                              if (data.success) {
+                                    showNotification('Order status updated successfully', 'success');
+                                    setTimeout(() => {
+                                          location.reload();
+                                    }, 1000);
+                              } else {
+                                    showNotification('Error updating order status: ' + data.message, 'error');
+                              }
+                        })
+                        .catch(error => {
+                              showNotification('Error updating order status', 'error');
+                        });
+            }
+
+            function showNotification(message, type) {
+                  // Create notification element
+                  const notification = document.createElement('div');
+                  notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed`;
+                  notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+                  notification.innerHTML = `
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                        ${message}
+                        <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+                  `;
+
+                  document.body.appendChild(notification);
+
+                  // Auto remove after 3 seconds
+                  setTimeout(() => {
+                        if (notification.parentElement) {
+                              notification.remove();
+                        }
+                  }, 3000);
             }
       </script>
 </body>

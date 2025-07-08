@@ -72,16 +72,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="container">
             <div class="row justify-content-center">
                   <div class="col-xl-10 col-lg-12 col-md-9">
-                        <div class="card o-hidden border-0 shadow-lg my-5">
+                        <div class="card login-card">
                               <div class="card-body p-0">
-                                    <div class="row">
+                                    <div class="row g-0">
                                           <div class="col-lg-6 d-none d-lg-block bg-login-image"></div>
                                           <div class="col-lg-6">
-                                                <div class="p-5">
+                                                <div class="login-form-container">
                                                       <div class="text-center">
-                                                            <h1 class="h4 text-gray-900 mb-4">
-                                                                  <i class="fas fa-store text-primary me-2"></i>
-                                                                  POS System Login
+                                                            <h1 class="login-title">
+                                                                  <i class="fas fa-store"></i>
+                                                                  Welcome Back
                                                             </h1>
                                                       </div>
 
@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                       <?php endif; ?>
 
                                                       <form class="user" method="POST" action="">
-                                                            <div class="form-group mb-3">
+                                                            <div class="form-group mb-4">
                                                                   <div class="input-group">
                                                                         <span class="input-group-text">
                                                                               <i class="fas fa-user"></i>
@@ -105,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                                   </div>
                                                             </div>
 
-                                                            <div class="form-group mb-3">
+                                                            <div class="form-group mb-4">
                                                                   <div class="input-group">
                                                                         <span class="input-group-text">
                                                                               <i class="fas fa-lock"></i>
@@ -115,43 +115,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                                   </div>
                                                             </div>
 
-                                                            <div class="form-group mb-3">
-                                                                  <div class="custom-control custom-checkbox small">
-                                                                        <input type="checkbox" class="custom-control-input" id="customCheck">
-                                                                        <label class="custom-control-label" for="customCheck">
+                                                            <div class="form-group mb-4">
+                                                                  <div class="form-check">
+                                                                        <input type="checkbox" class="form-check-input" id="customCheck">
+                                                                        <label class="form-check-label" for="customCheck">
                                                                               Remember Me
                                                                         </label>
                                                                   </div>
                                                             </div>
 
-                                                            <button type="submit" class="btn btn-primary btn-user btn-block w-100">
+                                                            <button type="submit" class="btn btn-primary btn-user w-100">
                                                                   <i class="fas fa-sign-in-alt me-2"></i>
-                                                                  Login
+                                                                  Sign In
                                                             </button>
                                                       </form>
 
-                                                      <hr>
+                                                      <hr class="my-4">
 
-                                                      <div class="text-center">
-                                                            <a class="small" href="register.php">Create an Account</a>
+                                                      <div class="login-links">
+                                                            <div class="text-center mb-2">
+                                                                  <a href="register.php">Create an Account</a>
+                                                            </div>
+
+                                                            <div class="text-center mb-2">
+                                                                  <a href="forgot-password.php">Forgot Password?</a>
+                                                            </div>
+
+                                                            <div class="text-center">
+                                                                  <a href="index.php">
+                                                                        <i class="fas fa-arrow-left me-1"></i>
+                                                                        Back to POS
+                                                                  </a>
+                                                            </div>
                                                       </div>
 
-                                                      <div class="text-center">
-                                                            <a class="small" href="forgot-password.php">Forgot Password?</a>
-                                                      </div>
-
-                                                      <div class="text-center">
-                                                            <a class="small" href="index.php">
-                                                                  <i class="fas fa-arrow-left me-1"></i>
-                                                                  Back to POS
-                                                            </a>
-                                                      </div>
-
-                                                      <div class="text-center mt-4">
-                                                            <small class="text-muted">
+                                                      <div class="login-credentials">
+                                                            <small>
                                                                   <strong>Default Admin Credentials:</strong><br>
-                                                                  Username: **********<br>
-                                                                  Password: **********
+                                                                  Username: admin<br>
+                                                                  Password: admin123
                                                             </small>
                                                       </div>
                                                 </div>

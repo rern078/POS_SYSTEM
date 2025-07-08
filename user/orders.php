@@ -284,7 +284,7 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
       <!-- Order Details Modal -->
       <div class="modal fade" id="orderDetailsModal" tabindex="-1">
-            <div class="modal-dialog modal-lg">
+            <div class="modal-dialog modal-xl">
                   <div class="modal-content">
                         <div class="modal-header">
                               <h5 class="modal-title">Order Details</h5>

@@ -39,6 +39,12 @@
                               </a>
                         </li>
                         <li class="sidebar-nav-item">
+                              <a class="sidebar-nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'orders.php' ? 'active' : ''; ?>" href="orders.php">
+                                    <i class="fas fa-shopping-cart"></i>
+                                    <span>Orders</span>
+                              </a>
+                        </li>
+                        <li class="sidebar-nav-item">
                               <a class="sidebar-nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'inventory.php' ? 'active' : ''; ?>" href="inventory.php">
                                     <i class="fas fa-warehouse"></i>
                                     <span>Inventory</span>

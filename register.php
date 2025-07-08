@@ -104,15 +104,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="container">
             <div class="row justify-content-center">
                   <div class="col-xl-10 col-lg-12 col-md-9">
-                        <div class="card o-hidden border-0 shadow-lg my-5">
+                        <div class="card login-card">
                               <div class="card-body p-0">
-                                    <div class="row">
+                                    <div class="row g-0">
                                           <div class="col-lg-6 d-none d-lg-block bg-login-image"></div>
                                           <div class="col-lg-6">
-                                                <div class="p-5">
+                                                <div class="login-form-container">
                                                       <div class="text-center">
-                                                            <h1 class="h4 text-gray-900 mb-4">
-                                                                  <i class="fas fa-user-plus text-primary me-2"></i>
+                                                            <h1 class="login-title">
+                                                                  <i class="fas fa-user-plus"></i>
                                                                   Create Account
                                                             </h1>
                                                       </div>
@@ -132,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                       <?php endif; ?>
 
                                                       <form class="user" method="POST" action="">
-                                                            <div class="form-group mb-3">
+                                                            <div class="form-group mb-4">
                                                                   <div class="input-group">
                                                                         <span class="input-group-text">
                                                                               <i class="fas fa-user"></i>
@@ -144,7 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                                   </div>
                                                             </div>
 
-                                                            <div class="form-group mb-3">
+                                                            <div class="form-group mb-4">
                                                                   <div class="input-group">
                                                                         <span class="input-group-text">
                                                                               <i class="fas fa-envelope"></i>
@@ -156,7 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                                   </div>
                                                             </div>
 
-                                                            <div class="form-group mb-3">
+                                                            <div class="form-group mb-4">
                                                                   <div class="input-group">
                                                                         <span class="input-group-text">
                                                                               <i class="fas fa-lock"></i>
@@ -166,7 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                                   </div>
                                                             </div>
 
-                                                            <div class="form-group mb-3">
+                                                            <div class="form-group mb-4">
                                                                   <div class="input-group">
                                                                         <span class="input-group-text">
                                                                               <i class="fas fa-lock"></i>
@@ -177,12 +177,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                             </div>
 
                                                             <?php if ($canAssignRoles): ?>
-                                                                  <div class="form-group mb-3">
+                                                                  <div class="form-group mb-4">
                                                                         <div class="input-group">
                                                                               <span class="input-group-text">
                                                                                     <i class="fas fa-user-tag"></i>
                                                                               </span>
-                                                                              <select class="form-select" name="role" required>
+                                                                              <select class="form-select form-control-user" name="role" required>
                                                                                     <option value="cashier" <?php echo ($_POST['role'] ?? 'cashier') === 'cashier' ? 'selected' : ''; ?>>Cashier</option>
                                                                                     <?php if (in_array($_SESSION['role'], ['admin', 'manager'])): ?>
                                                                                           <option value="manager" <?php echo ($_POST['role'] ?? '') === 'manager' ? 'selected' : ''; ?>>Manager</option>
@@ -192,43 +192,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                                                     <?php endif; ?>
                                                                               </select>
                                                                         </div>
-                                                                        <small class="form-text text-muted">
+                                                                        <small class="form-text text-muted mt-2">
                                                                               <i class="fas fa-info-circle me-1"></i>
                                                                               You can assign roles based on your current privileges.
                                                                         </small>
                                                                   </div>
                                                             <?php else: ?>
-                                                                  <div class="form-group mb-3">
+                                                                  <div class="form-group mb-4">
                                                                         <div class="input-group">
                                                                               <span class="input-group-text">
                                                                                     <i class="fas fa-user-tag"></i>
                                                                               </span>
-                                                                              <input type="text" class="form-control" value="Cashier" readonly>
+                                                                              <input type="text" class="form-control form-control-user" value="Cashier" readonly>
                                                                         </div>
-                                                                        <small class="form-text text-muted">
+                                                                        <small class="form-text text-muted mt-2">
                                                                               <i class="fas fa-info-circle me-1"></i>
                                                                               New accounts are created as Cashier by default. Contact an admin to change roles.
                                                                         </small>
                                                                   </div>
                                                             <?php endif; ?>
 
-                                                            <button type="submit" class="btn btn-primary btn-user btn-block w-100">
+                                                            <button type="submit" class="btn btn-primary btn-user w-100">
                                                                   <i class="fas fa-user-plus me-2"></i>
-                                                                  Register Account
+                                                                  Create Account
                                                             </button>
                                                       </form>
 
-                                                      <hr>
+                                                      <hr class="my-4">
 
-                                                      <div class="text-center">
-                                                            <a class="small" href="login.php">Already have an account? Login!</a>
-                                                      </div>
+                                                      <div class="login-links">
+                                                            <div class="text-center mb-2">
+                                                                  <a href="login.php">Already have an account? Login!</a>
+                                                            </div>
 
-                                                      <div class="text-center">
-                                                            <a class="small" href="index.php">
-                                                                  <i class="fas fa-arrow-left me-1"></i>
-                                                                  Back to POS
-                                                            </a>
+                                                            <div class="text-center">
+                                                                  <a href="index.php">
+                                                                        <i class="fas fa-arrow-left me-1"></i>
+                                                                        Back to POS
+                                                                  </a>
+                                                            </div>
                                                       </div>
                                                 </div>
                                           </div>

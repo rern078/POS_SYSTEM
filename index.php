@@ -40,7 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                     'name' => $product['name'],
                                     'price' => $product['discount_price'] ?: $product['price'],
                                     'quantity' => $quantity,
-                                    'image' => $product['image_path']
+                                    'image' => $product['image_path'],
+                                    'stock_quantity' => $product['stock_quantity']
                               ];
                         }
                         echo json_encode(['success' => true, 'message' => 'Product added to cart']);
@@ -58,6 +59,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                               unset($_SESSION['guest_cart'][$product_id]);
                         } else {
                               $_SESSION['guest_cart'][$product_id]['quantity'] = $quantity;
+
+                              // Ensure stock_quantity is set
+                              if (!isset($_SESSION['guest_cart'][$product_id]['stock_quantity'])) {
+                                    $pdo = getDBConnection();
+                                    $stmt = $pdo->prepare("SELECT stock_quantity FROM products WHERE id = ?");
+                                    $stmt->execute([$product_id]);
+                                    $product = $stmt->fetch(PDO::FETCH_ASSOC);
+                                    if ($product) {
+                                          $_SESSION['guest_cart'][$product_id]['stock_quantity'] = $product['stock_quantity'];
+                                    } else {
+                                          $_SESSION['guest_cart'][$product_id]['stock_quantity'] = 0;
+                                    }
+                              }
                         }
                   }
 
@@ -140,18 +154,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                 <div class="text-muted">Cart is empty</div>
                               </div>';
                   } else {
+                        // Ensure all cart items have stock information
+                        $pdo = getDBConnection();
+                        foreach ($_SESSION['guest_cart'] as $product_id => $item) {
+                              // If stock_quantity is not set, fetch it from database
+                              if (!isset($item['stock_quantity'])) {
+                                    $stmt = $pdo->prepare("SELECT stock_quantity FROM products WHERE id = ?");
+                                    $stmt->execute([$product_id]);
+                                    $product = $stmt->fetch(PDO::FETCH_ASSOC);
+                                    if ($product) {
+                                          $_SESSION['guest_cart'][$product_id]['stock_quantity'] = $product['stock_quantity'];
+                                    } else {
+                                          $_SESSION['guest_cart'][$product_id]['stock_quantity'] = 0;
+                                    }
+                              }
+                        }
+
                         foreach ($_SESSION['guest_cart'] as $product_id => $item) {
 ?>
-                              <div class="cart-item" id="cart-item-<?php echo $product_id; ?>">
+                              <div class="cart-item" id="cart-item-<?php echo $product_id; ?>" data-stock="<?php echo $item['stock_quantity']; ?>">
                                     <div class="d-flex justify-content-between align-items-start">
                                           <div class="flex-grow-1">
                                                 <h6 class="mb-1"><?php echo htmlspecialchars($item['name']); ?></h6>
                                                 <p class="mb-1 text-muted">$<?php echo number_format($item['price'], 2); ?> each</p>
                                                 <div class="quantity-control">
                                                       <button class="quantity-btn" onclick="updateGuestQuantity(<?php echo $product_id; ?>, -1)">-</button>
-                                                      <span class="mx-2"><?php echo $item['quantity']; ?></span>
+                                                      <input type="number" class="form-control mx-2 cart-qty-input"
+                                                            value="<?php echo $item['quantity']; ?>"
+                                                            min="1"
+                                                            max="<?php echo $item['stock_quantity']; ?>"
+                                                            style="width: 60px; display: inline-block; text-align: center;"
+                                                            onchange="updateGuestQuantityDirect(<?php echo $product_id; ?>, this.value)"
+                                                            onkeypress="return event.charCode >= 48 && event.charCode <= 57">
                                                       <button class="quantity-btn" onclick="updateGuestQuantity(<?php echo $product_id; ?>, 1)">+</button>
                                                 </div>
+                                                <small class="text-muted">Stock: <?php echo $item['stock_quantity']; ?> available</small>
                                           </div>
                                           <div class="text-end">
                                                 <h6 class="mb-1">$<?php echo number_format($item['price'] * $item['quantity'], 2); ?></h6>
@@ -170,7 +207,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   foreach ($_SESSION['guest_cart'] as $item) {
                         $total += $item['price'] * $item['quantity'];
                   }
-                  echo json_encode(['success' => true, 'html' => $html, 'total' => '$' . number_format($total, 2)]);
+                  $total_quantity = 0;
+                  foreach ($_SESSION['guest_cart'] as $item) {
+                        $total_quantity += $item['quantity'];
+                  }
+                  echo json_encode([
+                        'success' => true,
+                        'html' => $html,
+                        'total' => '$' . number_format($total, 2),
+                        'total_quantity' => $total_quantity
+                  ]);
                   exit;
 
             case 'clear_guest_cart':
@@ -241,7 +287,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
       <nav class="navbar navbar-expand-lg navbar-light fixed-top">
             <div class="container">
                   <a class="navbar-brand" href="#">
-                        <i class="fas fa-store text-primary me-2"></i>POS System
+                        <i class="fas fa-store text-primary me-2"></i>MCH-DIGITAL
                   </a>
 
                   <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -450,7 +496,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                               $has_discount = $product['discount_price'] && $product['discount_price'] < $product['price'];
                         ?>
                               <div class="col-lg-3 col-md-6 product-item-container">
-                                    <div class="card product-card h-100 position-relative" onclick="addToGuestCart(<?php echo $product['id']; ?>)">
+                                    <div class="card product-card h-100 position-relative">
                                           <div class="quantity-overlay" id="quantity-overlay-<?php echo $product['id']; ?>" style="display: none;">
                                                 <div class="quantity-controls">
                                                       <button class="quantity-btn" onclick="event.stopPropagation(); updateProductQuantity(<?php echo $product['id']; ?>, -1)">-</button>
@@ -459,7 +505,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                                 </div>
                                                 <div class="quantity-actions">
                                                       <button class="btn btn-sm btn-success" onclick="event.stopPropagation(); addToGuestCartWithQuantity(<?php echo $product['id']; ?>)">
-                                                            <i class="fas fa-cart-plus"></i> Add
+                                                            <i class="fas fa-cart-plus"></i> Add to Cart
                                                       </button>
                                                       <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); hideQuantityOverlay(<?php echo $product['id']; ?>)">
                                                             Cancel
@@ -469,45 +515,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                           <button class="add-to-cart-btn" onclick="event.stopPropagation(); showQuantityOverlay(<?php echo $product['id']; ?>)">
                                                 <i class="fas fa-plus"></i>
                                           </button>
-                                          <div class="product-image-container">
-                                                <img src="<?php echo $img_path; ?>"
-                                                      class="card-img-top product-image"
-                                                      alt="<?php echo htmlspecialchars($product['name']); ?>">
-                                                <?php if ($has_discount): ?>
-                                                      <div class="discount-badge">
-                                                            <span class="badge bg-danger">
-                                                                  <?php
-                                                                  $discount_percent = round((($product['price'] - $product['discount_price']) / $product['price']) * 100);
-                                                                  echo $discount_percent . '% OFF';
-                                                                  ?>
-                                                            </span>
-                                                      </div>
-                                                <?php endif; ?>
-                                          </div>
-                                          <div class="card-body d-flex flex-column">
-                                                <h6 class="card-title"><?php echo htmlspecialchars($product['name']); ?></h6>
-                                                <p class="card-text text-muted small">
-                                                      <?php echo htmlspecialchars(substr($product['description'], 0, 60)) . (strlen($product['description']) > 60 ? '...' : ''); ?>
-                                                </p>
-                                                <div class="mt-auto">
-                                                      <div class="price-container">
-                                                            <?php if ($has_discount): ?>
-                                                                  <span class="original-price text-muted text-decoration-line-through">
-                                                                        $<?php echo number_format($product['price'], 2); ?>
+                                          <div class="product-card-click-area" onclick="handleProductCardClick(<?php echo $product['id']; ?>)">
+                                                <div class="product-image-container">
+                                                      <img src="<?php echo $img_path; ?>"
+                                                            class="card-img-top product-image"
+                                                            alt="<?php echo htmlspecialchars($product['name']); ?>">
+                                                      <?php if ($has_discount): ?>
+                                                            <div class="discount-badge">
+                                                                  <span class="badge bg-danger">
+                                                                        <?php
+                                                                        $discount_percent = round((($product['price'] - $product['discount_price']) / $product['price']) * 100);
+                                                                        echo $discount_percent . '% OFF';
+                                                                        ?>
                                                                   </span>
-                                                            <?php endif; ?>
-                                                            <span class="current-price fw-bold text-primary">
-                                                                  $<?php echo number_format($display_price, 2); ?>
-                                                            </span>
-                                                      </div>
-                                                      <div class="stock-info small text-muted mt-1">
-                                                            <i class="fas fa-box me-1"></i>
-                                                            <?php echo $product['stock_quantity']; ?> in stock
-                                                      </div>
-                                                      <div class="category-badge mt-2">
-                                                            <span class="badge bg-light text-dark">
-                                                                  <?php echo htmlspecialchars($product['category'] ?? 'Uncategorized'); ?>
-                                                            </span>
+                                                            </div>
+                                                      <?php endif; ?>
+                                                </div>
+                                                <div class="card-body d-flex flex-column">
+                                                      <h6 class="card-title"><?php echo htmlspecialchars($product['name']); ?></h6>
+                                                      <p class="card-text text-muted small">
+                                                            <?php echo htmlspecialchars(substr($product['description'], 0, 60)) . (strlen($product['description']) > 60 ? '...' : ''); ?>
+                                                      </p>
+                                                      <div class="mt-auto">
+                                                            <div class="price-container">
+                                                                  <?php if ($has_discount): ?>
+                                                                        <span class="original-price text-muted text-decoration-line-through">
+                                                                              $<?php echo number_format($product['price'], 2); ?>
+                                                                        </span>
+                                                                  <?php endif; ?>
+                                                                  <span class="current-price fw-bold text-primary">
+                                                                        $<?php echo number_format($display_price, 2); ?>
+                                                                  </span>
+                                                            </div>
+                                                            <div class="stock-info small text-muted mt-1">
+                                                                  <i class="fas fa-box me-1"></i>
+                                                                  <?php echo $product['stock_quantity']; ?> in stock
+                                                            </div>
+                                                            <div class="category-badge mt-2">
+                                                                  <span class="badge bg-light text-dark">
+                                                                        <?php echo htmlspecialchars($product['category'] ?? 'Uncategorized'); ?>
+                                                                  </span>
+                                                            </div>
                                                       </div>
                                                 </div>
                                           </div>
@@ -788,6 +836,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   document.getElementById('cartOverlay').classList.remove('show');
             }
 
+            function handleProductCardClick(productId) {
+                  // Check if quantity overlay is already visible
+                  const overlay = document.getElementById(`quantity-overlay-${productId}`);
+                  if (overlay && overlay.style.display === 'flex') {
+                        return; // Don't do anything if overlay is already visible
+                  }
+
+                  // Show quantity overlay when card is clicked
+                  showQuantityOverlay(productId);
+            }
+
             function addToGuestCart(productId) {
                   addToGuestCartWithQuantity(productId, 1);
             }
@@ -853,11 +912,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             });
 
             function updateGuestQuantity(productId, change) {
-                  const currentQty = parseInt(document.querySelector(`#cart-item-${productId} .quantity-control span`).textContent);
+                  const cartItem = document.querySelector(`#cart-item-${productId}`);
+                  const currentQty = parseInt(cartItem.querySelector('.cart-qty-input').value);
+                  const stockQty = parseInt(cartItem.dataset.stock);
                   const newQty = currentQty + change;
 
                   if (newQty <= 0) {
                         removeFromGuestCart(productId);
+                        return;
+                  }
+
+                  // Check if new quantity exceeds stock
+                  if (newQty > stockQty) {
+                        showNotification(`Cannot add more than ${stockQty} items. Only ${stockQty} available in stock.`, 'error');
                         return;
                   }
 
@@ -979,10 +1046,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                               const badge = document.getElementById('cartBadge');
                               let itemCount = 0;
 
-                              if (data.success && !data.html.includes('Cart is empty')) {
-                                    // Count items in cart
-                                    const cartItems = document.querySelectorAll('.cart-item');
-                                    itemCount = cartItems.length;
+                              if (data.success && data.html && !data.html.includes('Cart is empty')) {
+                                    // Parse the cart HTML to count quantities
+                                    // But better: add a new field in your PHP response with the total quantity
+                                    if (data.total_quantity !== undefined) {
+                                          itemCount = data.total_quantity;
+                                    }
                               }
 
                               if (itemCount > 0) {
@@ -1167,6 +1236,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   stat.style.transition = 'all 0.6s ease';
                   observer.observe(stat);
             });
+
+            function updateGuestQuantityDirect(productId, newQuantity) {
+                  const cartItem = document.querySelector(`#cart-item-${productId}`);
+                  const quantity = parseInt(newQuantity);
+                  const stockQty = parseInt(cartItem.dataset.stock);
+
+                  if (isNaN(quantity) || quantity <= 0) {
+                        // Reset to 1 if invalid input
+                        cartItem.querySelector('.cart-qty-input').value = 1;
+                        return;
+                  }
+
+                  // Check if quantity exceeds stock
+                  if (quantity > stockQty) {
+                        showNotification(`Cannot add more than ${stockQty} items. Only ${stockQty} available in stock.`, 'error');
+                        // Reset to stock quantity
+                        cartItem.querySelector('.cart-qty-input').value = stockQty;
+                        return;
+                  }
+
+                  fetch('index.php', {
+                              method: 'POST',
+                              headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded'
+                              },
+                              body: `action=update_cart&product_id=${productId}&quantity=${quantity}`
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                              if (data.success) {
+                                    fetchGuestCart();
+                                    updateCartBadge();
+                              }
+                        });
+            }
+
+            // Function removed - no longer needed since we use span instead of input
       </script>
 </body>
 
