@@ -35,9 +35,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $_SESSION['email'] = $user['email'];
                         $_SESSION['role'] = $user['role'];
 
-                        // Redirect based on role
-                        if ($user['role'] === 'admin') {
+                        // Redirect based on role and redirect parameter
+                        $redirect = $_GET['redirect'] ?? '';
+                        if ($redirect === 'checkout') {
+                              header('Location: index.php?restore_cart=1');
+                        } elseif ($user['role'] === 'admin') {
                               header('Location: admin/index.php');
+                        } elseif ($user['role'] === 'customer') {
+                              header('Location: index.php?logged_in=1');
                         } else {
                               header('Location: user/index.php');
                         }

@@ -28,7 +28,8 @@ function initializeDatabase()
         username VARCHAR(50) UNIQUE NOT NULL,
         email VARCHAR(100) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
-        role ENUM('admin', 'cashier', 'manager') DEFAULT 'cashier',
+        full_name VARCHAR(100),
+        role ENUM('admin', 'cashier', 'manager', 'customer') DEFAULT 'cashier',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )");
@@ -51,13 +52,16 @@ function initializeDatabase()
       // Create orders table
       $pdo->exec("CREATE TABLE IF NOT EXISTS orders (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NULL,
         customer_name VARCHAR(100),
         customer_email VARCHAR(100),
         total_amount DECIMAL(10,2) NOT NULL,
         status ENUM('pending', 'completed', 'cancelled') DEFAULT 'pending',
         payment_method VARCHAR(50),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_orders_user_id (user_id),
+        INDEX idx_orders_customer_email (customer_email)
     )");
 
       // Create order_items table

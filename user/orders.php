@@ -11,7 +11,10 @@ if (!isLoggedIn()) {
 
 $pdo = getDBConnection();
 
-// Get orders with pagination
+// Get current user
+$user = getCurrentUser();
+
+// Get orders with pagination - only show customer's own orders
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = 10;
 $offset = ($page - 1) * $limit;
@@ -19,25 +22,25 @@ $offset = ($page - 1) * $limit;
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $status = isset($_GET['status']) ? $_GET['status'] : '';
 
-$where_conditions = [];
-$params = [];
+$where_conditions = ["(o.user_id = ? OR (o.user_id IS NULL AND o.customer_email = ?))"];
+$params = [$user['id'], $user['email']];
 
 if (!empty($search)) {
-      $where_conditions[] = "(customer_name LIKE ? OR customer_email LIKE ? OR id LIKE ?)";
+      $where_conditions[] = "(o.customer_name LIKE ? OR o.customer_email LIKE ? OR o.id LIKE ?)";
       $params[] = "%$search%";
       $params[] = "%$search%";
       $params[] = "%$search%";
 }
 
 if (!empty($status)) {
-      $where_conditions[] = "status = ?";
+      $where_conditions[] = "o.status = ?";
       $params[] = $status;
 }
 
-$where_clause = !empty($where_conditions) ? 'WHERE ' . implode(' AND ', $where_conditions) : '';
+$where_clause = 'WHERE ' . implode(' AND ', $where_conditions);
 
 // Get total count
-$count_sql = "SELECT COUNT(*) FROM orders $where_clause";
+$count_sql = "SELECT COUNT(*) FROM orders o $where_clause";
 $stmt = $pdo->prepare($count_sql);
 $stmt->execute($params);
 $total_orders = $stmt->fetchColumn();

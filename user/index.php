@@ -9,6 +9,12 @@ if (!isLoggedIn()) {
       exit();
 }
 
+// Redirect customers to their dashboard
+if ($_SESSION['role'] === 'customer') {
+      header('Location: customer_dashboard.php');
+      exit();
+}
+
 // Get user data
 $user = getCurrentUser();
 $pdo = getDBConnection();

@@ -1,0 +1,153 @@
+/* Customer Dashboard Styles */
+body {
+      font-family: 'Inter', Arial, sans-serif;
+      background: #f7f9fb;
+      color: #222;
+}
+
+.customer-layout {
+      display: flex;
+      min-height: 100vh;
+}
+
+.customer-main {
+      flex: 1;
+      padding: 32px 16px 16px 16px;
+      background: #f7f9fb;
+}
+
+.content-card {
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+      margin-bottom: 24px;
+      border: none;
+}
+
+.content-card-header {
+      border-bottom: 1px solid #f0f0f0;
+      padding: 24px 24px 12px 24px;
+      background: transparent;
+      border-radius: 18px 18px 0 0;
+}
+
+.content-card-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #2d3748;
+}
+
+.content-card-body {
+      padding: 24px;
+}
+
+.stats-icon {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      font-size: 1.5rem;
+      margin-right: 12px;
+}
+
+.bg-primary {
+      background: #4f8cff !important;
+}
+
+.bg-success {
+      background: #34c759 !important;
+}
+
+.bg-info {
+      background: #00bcd4 !important;
+}
+
+.bg-warning {
+      background: #ffb300 !important;
+}
+
+.bg-danger {
+      background: #ff5252 !important;
+}
+
+.bg-secondary {
+      background: #b0b0b0 !important;
+}
+
+.stats-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #222;
+}
+
+.stats-label {
+      font-size: 1rem;
+      color: #888;
+}
+
+.btn-modern {
+      border-radius: 8px;
+      font-weight: 500;
+      padding: 8px 20px;
+      font-size: 1rem;
+      transition: background 0.2s, color 0.2s;
+}
+
+.btn-modern.btn-primary {
+      background: #4f8cff;
+      color: #fff;
+      border: none;
+}
+
+.btn-modern.btn-primary:hover {
+      background: #2563eb;
+      color: #fff;
+}
+
+.table {
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+}
+
+.table th,
+.table td {
+      vertical-align: middle;
+      border-top: none;
+      padding: 14px 12px;
+}
+
+.table thead th {
+      background: #f7f9fb;
+      color: #4f8cff;
+      font-weight: 600;
+      border-bottom: 2px solid #e0e0e0;
+}
+
+.badge {
+      border-radius: 6px;
+      font-size: 0.95em;
+      padding: 6px 12px;
+      font-weight: 500;
+}
+
+@media (max-width: 768px) {
+      .customer-main {
+            padding: 12px 4px;
+      }
+
+      .content-card-body,
+      .content-card-header {
+            padding: 14px;
+      }
+
+      .content-card-title {
+            font-size: 1.1rem;
+      }
+
+      .stats-number {
+            font-size: 1.2rem;
+      }
+}

@@ -4,42 +4,29 @@ require_once 'config/database.php';
 
 // Redirect if already logged in
 if (isset($_SESSION['user_id'])) {
-      header('Location: admin/index.php');
+      if ($_SESSION['role'] === 'admin') {
+            header('Location: admin/index.php');
+      } else {
+            header('Location: user/index.php');
+      }
       exit();
 }
 
 $error = '';
 $success = '';
 
-// Check if current user can assign roles (admin or manager)
-$canAssignRoles = isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'manager');
-
-// Handle registration form submission
+// Handle customer registration form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $username = trim($_POST['username'] ?? '');
       $email = trim($_POST['email'] ?? '');
       $password = $_POST['password'] ?? '';
       $confirm_password = $_POST['confirm_password'] ?? '';
-
-      // Set default role to cashier, only allow role change for admin/manager
-      if ($canAssignRoles) {
-            $role = $_POST['role'] ?? 'cashier';
-            // Validate role assignment based on current user's role
-            $valid_roles = ['cashier', 'manager', 'admin', 'customer'];
-            if (!in_array($role, $valid_roles)) {
-                  $error = 'Invalid role specified.';
-            } elseif ($role === 'admin' && $_SESSION['role'] !== 'admin') {
-                  $error = 'Only administrators can assign admin roles.';
-            } elseif ($role === 'manager' && !in_array($_SESSION['role'], ['admin', 'manager'])) {
-                  $error = 'Only administrators and managers can assign manager roles.';
-            }
-      } else {
-            $role = 'customer'; // Default role for regular registrations
-      }
+      $full_name = trim($_POST['full_name'] ?? '');
+      $phone = trim($_POST['phone'] ?? '');
 
       // Validation
-      if (empty($username) || empty($email) || empty($password)) {
-            $error = 'All fields are required.';
+      if (empty($username) || empty($email) || empty($password) || empty($full_name)) {
+            $error = 'All required fields must be filled.';
       } elseif (strlen($username) < 3) {
             $error = 'Username must be at least 3 characters long.';
       } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -64,14 +51,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if ($stmt->fetch()) {
                               $error = 'Email already exists.';
                         } else {
-                              // Hash password and insert user
+                              // Hash password and insert customer
                               $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-                              $stmt = $pdo->prepare("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)");
+                              $role = 'customer';
 
-                              if ($stmt->execute([$username, $email, $hashedPassword, $role])) {
-                                    $success = 'Registration successful! You can now login.';
+                              $stmt = $pdo->prepare("INSERT INTO users (username, email, password, full_name, role) VALUES (?, ?, ?, ?, ?)");
+
+                              if ($stmt->execute([$username, $email, $hashedPassword, $full_name, $role])) {
+                                    $success = 'Registration successful! You can now login to access your account and order history.';
                                     // Clear form data
                                     $_POST = array();
+                                    
+                                    // If redirect parameter is set, redirect to checkout
+                                    if (isset($_GET['redirect']) && $_GET['redirect'] === 'checkout') {
+                                          header('Location: login.php?redirect=checkout');
+                                          exit();
+                                    } else {
+                                          // Redirect customers to homepage after registration
+                                          header('Location: index.php?registered=1');
+                                          exit();
+                                    }
                               } else {
                                     $error = 'Registration failed. Please try again.';
                               }
@@ -90,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Register - POS System</title>
+      <title>Customer Registration - POS System</title>
 
       <!-- Bootstrap 5 CSS -->
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -113,8 +112,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                       <div class="text-center">
                                                             <h1 class="login-title">
                                                                   <i class="fas fa-user-plus"></i>
-                                                                  Create Account
+                                                                  Customer Registration
                                                             </h1>
+                                                            <p class="text-muted">Create your customer account</p>
                                                       </div>
 
                                                       <?php if ($error): ?>
@@ -138,6 +138,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                                               <i class="fas fa-user"></i>
                                                                         </span>
                                                                         <input type="text" class="form-control form-control-user"
+                                                                              name="full_name" placeholder="Enter Full Name..."
+                                                                              value="<?php echo htmlspecialchars($_POST['full_name'] ?? ''); ?>"
+                                                                              required>
+                                                                  </div>
+                                                            </div>
+
+                                                            <div class="form-group mb-4">
+                                                                  <div class="input-group">
+                                                                        <span class="input-group-text">
+                                                                              <i class="fas fa-at"></i>
+                                                                        </span>
+                                                                        <input type="text" class="form-control form-control-user"
                                                                               name="username" placeholder="Enter Username..."
                                                                               value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>"
                                                                               required>
@@ -153,6 +165,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                                               name="email" placeholder="Enter Email Address..."
                                                                               value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
                                                                               required>
+                                                                  </div>
+                                                            </div>
+
+                                                            <div class="form-group mb-4">
+                                                                  <div class="input-group">
+                                                                        <span class="input-group-text">
+                                                                              <i class="fas fa-phone"></i>
+                                                                        </span>
+                                                                        <input type="tel" class="form-control form-control-user"
+                                                                              name="phone" placeholder="Enter Phone Number (Optional)..."
+                                                                              value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>">
                                                                   </div>
                                                             </div>
 
@@ -176,46 +199,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                                   </div>
                                                             </div>
 
-                                                            <?php if ($canAssignRoles): ?>
-                                                                  <div class="form-group mb-4">
-                                                                        <div class="input-group">
-                                                                              <span class="input-group-text">
-                                                                                    <i class="fas fa-user-tag"></i>
-                                                                              </span>
-                                                                              <select class="form-select form-control-user" name="role" required>
-                                                                                    <option value="customer" <?php echo ($_POST['role'] ?? 'customer') === 'customer' ? 'selected' : ''; ?>>Customer</option>
-                                                                                    <option value="cashier" <?php echo ($_POST['role'] ?? '') === 'cashier' ? 'selected' : ''; ?>>Cashier</option>
-                                                                                    <?php if (in_array($_SESSION['role'], ['admin', 'manager'])): ?>
-                                                                                          <option value="manager" <?php echo ($_POST['role'] ?? '') === 'manager' ? 'selected' : ''; ?>>Manager</option>
-                                                                                    <?php endif; ?>
-                                                                                    <?php if ($_SESSION['role'] === 'admin'): ?>
-                                                                                          <option value="admin" <?php echo ($_POST['role'] ?? '') === 'admin' ? 'selected' : ''; ?>>Admin</option>
-                                                                                    <?php endif; ?>
-                                                                              </select>
-                                                                        </div>
-                                                                        <small class="form-text text-muted mt-2">
-                                                                              <i class="fas fa-info-circle me-1"></i>
-                                                                              You can assign roles based on your current privileges.
-                                                                        </small>
-                                                                  </div>
-                                                            <?php else: ?>
-                                                                  <div class="form-group mb-4">
-                                                                        <div class="input-group">
-                                                                              <span class="input-group-text">
-                                                                                    <i class="fas fa-user-tag"></i>
-                                                                              </span>
-                                                                              <input type="text" class="form-control form-control-user" value="Customer" readonly>
-                                                                        </div>
-                                                                        <small class="form-text text-muted mt-2">
-                                                                              <i class="fas fa-info-circle me-1"></i>
-                                                                              New accounts are created as Customer by default. Contact an admin to change roles.
-                                                                        </small>
-                                                                  </div>
-                                                            <?php endif; ?>
-
                                                             <button type="submit" class="btn btn-primary btn-user w-100">
                                                                   <i class="fas fa-user-plus me-2"></i>
-                                                                  Create Account
+                                                                  Create Customer Account
                                                             </button>
                                                       </form>
 
@@ -224,6 +210,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                       <div class="login-links">
                                                             <div class="text-center mb-2">
                                                                   <a href="login.php">Already have an account? Login!</a>
+                                                            </div>
+
+                                                            <div class="text-center mb-2">
+                                                                  <a href="register.php">Register as Staff Member</a>
                                                             </div>
 
                                                             <div class="text-center">

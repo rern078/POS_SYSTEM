@@ -34,8 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     $error = 'Username or email already exists.';
                               } else {
                                     $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                                    $stmt = $pdo->prepare("INSERT INTO users (username, email, password, role, full_name) VALUES (?, ?, ?, ?, ?)");
-                                    if ($stmt->execute([$username, $email, $hashed_password, $role, $full_name])) {
+                                    $stmt = $pdo->prepare("INSERT INTO users (username, email, password, full_name, role) VALUES (?, ?, ?, ?, ?)");
+                                    if ($stmt->execute([$username, $email, $hashed_password, $full_name, $role])) {
                                           $message = 'User added successfully!';
                                     } else {
                                           $error = 'Failed to add user.';
@@ -63,11 +63,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                               } else {
                                     if (!empty($password)) {
                                           $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                                          $stmt = $pdo->prepare("UPDATE users SET username = ?, email = ?, password = ?, role = ?, full_name = ? WHERE id = ?");
-                                          $params = [$username, $email, $hashed_password, $role, $full_name, $id];
+                                          $stmt = $pdo->prepare("UPDATE users SET username = ?, email = ?, password = ?, full_name = ?, role = ? WHERE id = ?");
+                                          $params = [$username, $email, $hashed_password, $full_name, $role, $id];
                                     } else {
-                                          $stmt = $pdo->prepare("UPDATE users SET username = ?, email = ?, role = ?, full_name = ? WHERE id = ?");
-                                          $params = [$username, $email, $role, $full_name, $id];
+                                          $stmt = $pdo->prepare("UPDATE users SET username = ?, email = ?, full_name = ?, role = ? WHERE id = ?");
+                                          $params = [$username, $email, $full_name, $role, $id];
                                     }
 
                                     if ($stmt->execute($params)) {
@@ -139,7 +139,7 @@ $stmt->execute($params);
 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get roles for filter dropdown
-$roles = ['admin', 'manager', 'cashier', 'user'];
+$roles = ['admin', 'manager', 'cashier', 'customer'];
 ?>
 
 <!DOCTYPE html>
@@ -345,10 +345,10 @@ $roles = ['admin', 'manager', 'cashier', 'user'];
                                                                   <td><?php echo htmlspecialchars($user['email']); ?></td>
                                                                   <td>
                                                                         <span class="badge bg-<?php
-                                                                                                echo $user['role'] === 'admin' ? 'danger' : ($user['role'] === 'manager' ? 'warning' : ($user['role'] === 'cashier' ? 'info' : 'secondary'));
+                                                                                                echo $user['role'] === 'admin' ? 'danger' : ($user['role'] === 'manager' ? 'warning' : ($user['role'] === 'cashier' ? 'info' : ($user['role'] === 'customer' ? 'success' : 'secondary')));
                                                                                                 ?>">
                                                                               <i class="fas fa-<?php
-                                                                                                echo $user['role'] === 'admin' ? 'crown' : ($user['role'] === 'manager' ? 'user-tie' : ($user['role'] === 'cashier' ? 'cash-register' : 'user'));
+                                                                                                echo $user['role'] === 'admin' ? 'crown' : ($user['role'] === 'manager' ? 'user-tie' : ($user['role'] === 'cashier' ? 'cash-register' : ($user['role'] === 'customer' ? 'user' : 'user')));
                                                                                                 ?> me-1"></i>
                                                                               <?php echo ucfirst(htmlspecialchars($user['role'])); ?>
                                                                         </span>

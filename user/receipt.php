@@ -19,15 +19,16 @@ if (!$order_id) {
       die('Order ID is required');
 }
 
-// Get order information
+// Get order information - ensure customer can only view their own orders
+$user = getCurrentUser();
 $stmt = $pdo->prepare("
-    SELECT * FROM orders WHERE id = ?
+    SELECT * FROM orders WHERE id = ? AND (user_id = ? OR (user_id IS NULL AND customer_email = ?))
 ");
-$stmt->execute([$order_id]);
+$stmt->execute([$order_id, $user['id'], $user['email']]);
 $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$order) {
-      die('Order not found');
+      die('Order not found or access denied');
 }
 
 // Get order items
@@ -48,23 +49,47 @@ if ($is_ajax) {
                   <div class="col-md-6">
                         <h6>Order Information</h6>
                         <table class="table table-sm">
-                              <tr><td><strong>Order ID:</strong></td><td>#<?php echo $order_id; ?></td></tr>
-                              <tr><td><strong>Date:</strong></td><td><?php echo date('M d, Y', strtotime($order['created_at'])); ?></td></tr>
-                              <tr><td><strong>Time:</strong></td><td><?php echo date('H:i A', strtotime($order['created_at'])); ?></td></tr>
-                              <tr><td><strong>Status:</strong></td><td><span class="badge bg-<?php echo $order['status'] === 'completed' ? 'success' : ($order['status'] === 'pending' ? 'warning' : 'danger'); ?>"><?php echo ucfirst($order['status']); ?></span></td></tr>
-                              <tr><td><strong>Payment Method:</strong></td><td><?php echo ucfirst($order['payment_method']); ?></td></tr>
+                              <tr>
+                                    <td><strong>Order ID:</strong></td>
+                                    <td>#<?php echo $order_id; ?></td>
+                              </tr>
+                              <tr>
+                                    <td><strong>Date:</strong></td>
+                                    <td><?php echo date('M d, Y', strtotime($order['created_at'])); ?></td>
+                              </tr>
+                              <tr>
+                                    <td><strong>Time:</strong></td>
+                                    <td><?php echo date('H:i A', strtotime($order['created_at'])); ?></td>
+                              </tr>
+                              <tr>
+                                    <td><strong>Status:</strong></td>
+                                    <td><span class="badge bg-<?php echo $order['status'] === 'completed' ? 'success' : ($order['status'] === 'pending' ? 'warning' : 'danger'); ?>"><?php echo ucfirst($order['status']); ?></span></td>
+                              </tr>
+                              <tr>
+                                    <td><strong>Payment Method:</strong></td>
+                                    <td><?php echo ucfirst($order['payment_method']); ?></td>
+                              </tr>
                         </table>
                   </div>
                   <div class="col-md-6">
                         <h6>Customer Information</h6>
                         <table class="table table-sm">
-                              <tr><td><strong>Name:</strong></td><td><?php echo htmlspecialchars($order['customer_name'] ?: 'Walk-in Customer'); ?></td></tr>
-                              <tr><td><strong>Email:</strong></td><td><?php echo htmlspecialchars($order['customer_email'] ?: 'N/A'); ?></td></tr>
-                              <tr><td><strong>Cashier:</strong></td><td><?php echo htmlspecialchars($_SESSION['username']); ?></td></tr>
+                              <tr>
+                                    <td><strong>Name:</strong></td>
+                                    <td><?php echo htmlspecialchars($order['customer_name'] ?: 'Walk-in Customer'); ?></td>
+                              </tr>
+                              <tr>
+                                    <td><strong>Email:</strong></td>
+                                    <td><?php echo htmlspecialchars($order['customer_email'] ?: 'N/A'); ?></td>
+                              </tr>
+                              <tr>
+                                    <td><strong>Cashier:</strong></td>
+                                    <td><?php echo htmlspecialchars($_SESSION['username']); ?></td>
+                              </tr>
                         </table>
                   </div>
             </div>
-            
+
             <h6 class="mt-4">Order Items</h6>
             <div class="table-responsive">
                   <table class="table table-sm">

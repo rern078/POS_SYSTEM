@@ -128,9 +128,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   try {
                         $pdo->beginTransaction();
 
-                        // Create order
-                        $stmt = $pdo->prepare("INSERT INTO orders (customer_name, customer_email, total_amount, payment_method, status) VALUES (?, ?, ?, ?, 'completed')");
-                        $stmt->execute([$customer_name, $customer_email, $total_amount, $payment_method]);
+                        // Create order - include user_id for logged-in customers
+                        $user_id = null;
+                        if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer') {
+                              $user_id = $_SESSION['user_id'];
+                        }
+                        
+                        $stmt = $pdo->prepare("INSERT INTO orders (user_id, customer_name, customer_email, total_amount, payment_method, status) VALUES (?, ?, ?, ?, ?, 'completed')");
+                        $stmt->execute([$user_id, $customer_name, $customer_email, $total_amount, $payment_method]);
                         $order_id = $pdo->lastInsertId();
 
                         // Add order items and update stock

@@ -118,9 +118,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         $pdo = getDBConnection();
                         $pdo->beginTransaction();
 
-                        // Create order
-                        $stmt = $pdo->prepare("INSERT INTO orders (customer_name, customer_email, total_amount, payment_method, status) VALUES (?, ?, ?, ?, 'completed')");
-                        $stmt->execute([$customer_name, $customer_email, $total_amount, $payment_method]);
+                        // Create order - include user_id if customer is logged in
+                        $user_id = null;
+                        if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer') {
+                              $user_id = $_SESSION['user_id'];
+                        }
+
+                        $stmt = $pdo->prepare("INSERT INTO orders (user_id, customer_name, customer_email, total_amount, payment_method, status) VALUES (?, ?, ?, ?, ?, 'completed')");
+                        $stmt->execute([$user_id, $customer_name, $customer_email, $total_amount, $payment_method]);
                         $order_id = $pdo->lastInsertId();
 
                         // Add order items and update stock
@@ -314,16 +319,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                           <span class="cart-badge" id="cartBadge" style="display: none;">0</span>
                                     </a>
                               </li>
-                              <li class="nav-item">
-                                    <a class="nav-link btn btn-outline-primary btn-custom ms-2" href="login.php">
-                                          <i class="fas fa-sign-in-alt me-2"></i>Login
-                                    </a>
-                              </li>
-                              <li class="nav-item">
-                                    <a class="nav-link btn btn-primary btn-custom ms-2" href="register.php">
-                                          <i class="fas fa-user-plus me-2"></i>Register
-                                    </a>
-                              </li>
+                              <?php if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer'): ?>
+                                    <li class="nav-item dropdown">
+                                          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                                <i class="fas fa-user-circle me-2"></i><?php echo $_SESSION['username']; ?>
+                                                <span class="badge bg-success ms-1">Customer</span>
+                                          </a>
+                                          <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" href="user/customer_dashboard.php">
+                                                            <i class="fas fa-tachometer-alt me-2"></i>My Dashboard
+                                                      </a></li>
+                                                <li><a class="dropdown-item" href="user/profile.php">
+                                                            <i class="fas fa-user me-2"></i>Profile
+                                                      </a></li>
+                                                <li><a class="dropdown-item" href="user/settings.php">
+                                                            <i class="fas fa-cog me-2"></i>Settings
+                                                      </a></li>
+                                                <li>
+                                                      <hr class="dropdown-divider">
+                                                </li>
+                                                <li><a class="dropdown-item" href="logout.php">
+                                                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                                      </a></li>
+                                          </ul>
+                                    </li>
+                              <?php else: ?>
+                                    <li class="nav-item">
+                                          <a class="nav-link btn btn-outline-primary btn-custom ms-2" href="login.php">
+                                                <i class="fas fa-sign-in-alt me-2"></i>Login
+                                          </a>
+                                    </li>
+                              <?php endif; ?>
+                              <?php if (!isset($_SESSION['user_id'])): ?>
+                                    <li class="nav-item dropdown">
+                                          <a class="nav-link btn btn-primary btn-custom ms-2 dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                                <i class="fas fa-user-plus me-2"></i>Register
+                                          </a>
+                                          <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" href="customer_register.php">
+                                                            <i class="fas fa-user me-2"></i>Customer Account
+                                                      </a></li>
+                                                <li><a class="dropdown-item" href="register.php">
+                                                            <i class="fas fa-user-tie me-2"></i>Staff Account
+                                                      </a></li>
+                                          </ul>
+                                    </li>
+                              <?php endif; ?>
                         </ul>
                   </div>
             </div>
@@ -337,30 +378,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   <div class="shape"></div>
             </div>
             <div class="container">
-                  <div class="row align-items-center hero-content">
-                        <div class="col-lg-6">
-                              <h1 class="display-4 fw-bold mb-4">
-                                    Modern Point of Sale System
-                              </h1>
-                              <p class="lead mb-4">
-                                    Streamline your business operations with our comprehensive POS solution.
-                                    Manage sales, inventory, and customers with ease.
-                              </p>
-                              <div class="d-flex flex-wrap gap-3">
-                                    <a href="register.php" class="btn btn-light btn-custom">
-                                          <i class="fas fa-rocket me-2"></i>Get Started
-                                    </a>
-                                    <a href="#features" class="btn btn-outline-light btn-custom">
-                                          <i class="fas fa-play me-2"></i>Learn More
-                                    </a>
+                  <?php if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer'): ?>
+                        <!-- Customer Welcome Section -->
+                        <div class="row align-items-center hero-content">
+                              <div class="col-lg-6">
+                                    <h1 class="display-4 fw-bold mb-4">
+                                          Welcome back, <?php echo htmlspecialchars($_SESSION['username']); ?>!
+                                    </h1>
+                                    <p class="lead mb-4">
+                                          Continue shopping or check your order history. We're here to serve you!
+                                    </p>
+                                    <div class="d-flex flex-wrap gap-3">
+                                          <a href="#products" class="btn btn-light btn-custom">
+                                                <i class="fas fa-shopping-cart me-2"></i>Shop Now
+                                          </a>
+                                          <a href="user/customer_dashboard.php" class="btn btn-outline-light btn-custom">
+                                                <i class="fas fa-tachometer-alt me-2"></i>My Dashboard
+                                          </a>
+                                    </div>
+                              </div>
+                              <div class="col-lg-6 text-center">
+                                    <div class="position-relative">
+                                          <i class="fas fa-user-circle" style="font-size: 15rem; opacity: 0.3;"></i>
+                                    </div>
                               </div>
                         </div>
-                        <div class="col-lg-6 text-center">
-                              <div class="position-relative">
-                                    <i class="fas fa-cash-register" style="font-size: 15rem; opacity: 0.3;"></i>
+                  <?php else: ?>
+                        <!-- Default Hero Section -->
+                        <div class="row align-items-center hero-content">
+                              <div class="col-lg-6">
+                                    <h1 class="display-4 fw-bold mb-4">
+                                          Modern Point of Sale System
+                                    </h1>
+                                    <p class="lead mb-4">
+                                          Streamline your business operations with our comprehensive POS solution.
+                                          Manage sales, inventory, and customers with ease.
+                                    </p>
+                                    <div class="d-flex flex-wrap gap-3">
+                                          <a href="register.php" class="btn btn-light btn-custom">
+                                                <i class="fas fa-rocket me-2"></i>Get Started
+                                          </a>
+                                          <a href="#features" class="btn btn-outline-light btn-custom">
+                                                <i class="fas fa-play me-2"></i>Learn More
+                                          </a>
+                                    </div>
+                              </div>
+                              <div class="col-lg-6 text-center">
+                                    <div class="position-relative">
+                                          <i class="fas fa-cash-register" style="font-size: 15rem; opacity: 0.3;"></i>
+                                    </div>
                               </div>
                         </div>
-                  </div>
+                  <?php endif; ?>
             </div>
       </section>
 
@@ -734,6 +803,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         </div>
                         <form id="paymentForm">
                               <div class="modal-body">
+                                    <!-- Customer Login Option -->
+                                    <div class="mb-3">
+                                          <div class="alert alert-info">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                <strong>Optional:</strong> Login to save your order history and get faster checkout next time.
+                                          </div>
+                                          <div class="d-flex gap-2 mb-3">
+                                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="showCustomerLogin()">
+                                                      <i class="fas fa-sign-in-alt me-2"></i>Login as Customer
+                                                </button>
+                                                <button type="button" class="btn btn-outline-success btn-sm" onclick="showCustomerRegister()">
+                                                      <i class="fas fa-user-plus me-2"></i>Register as Customer
+                                                </button>
+                                          </div>
+                                    </div>
+
                                     <div class="mb-3">
                                           <label for="customer_name" class="form-label">Full Name *</label>
                                           <input type="text" class="form-control" id="customer_name" name="customer_name" required>
@@ -1153,6 +1238,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   }
             }
 
+            function showCustomerLogin() {
+                  // Store current cart data in sessionStorage
+                  const cartData = JSON.stringify({
+                        total: document.getElementById('cartTotal').textContent,
+                        items: document.getElementById('cartItemsContainer').innerHTML
+                  });
+                  sessionStorage.setItem('pendingCart', cartData);
+
+                  // Redirect to login page
+                  window.location.href = 'login.php?redirect=checkout';
+            }
+
+            function showCustomerRegister() {
+                  // Store current cart data in sessionStorage
+                  const cartData = JSON.stringify({
+                        total: document.getElementById('cartTotal').textContent,
+                        items: document.getElementById('cartItemsContainer').innerHTML
+                  });
+                  sessionStorage.setItem('pendingCart', cartData);
+
+                  // Redirect to customer registration page
+                  window.location.href = 'customer_register.php?redirect=checkout';
+            }
+
             // Payment form submission
             document.getElementById('paymentForm').addEventListener('submit', function(e) {
                   e.preventDefault();
@@ -1188,6 +1297,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             // Initialize cart badge on page load
             document.addEventListener('DOMContentLoaded', function() {
                   updateCartBadge();
+
+                  // Check if we need to restore cart from sessionStorage
+                  if (window.location.search.includes('restore_cart=1')) {
+                        const pendingCart = sessionStorage.getItem('pendingCart');
+                        if (pendingCart) {
+                              try {
+                                    const cartData = JSON.parse(pendingCart);
+                                    // Clear the stored cart data
+                                    sessionStorage.removeItem('pendingCart');
+
+                                    // Show notification
+                                    showNotification('Welcome back! Your cart has been restored.', 'success');
+
+                                    // Refresh cart display
+                                    fetchGuestCart();
+                              } catch (e) {
+                                    console.error('Error restoring cart:', e);
+                              }
+                        }
+                  }
+
+                  // Show welcome message for newly registered customers
+                  if (window.location.search.includes('registered=1')) {
+                        showNotification('Registration successful! Welcome to our store.', 'success');
+                        // Clean up URL
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                  }
+
+                  // Show welcome message for logged in customers
+                  if (window.location.search.includes('logged_in=1')) {
+                        showNotification('Welcome back! You are now logged in.', 'success');
+                        // Clean up URL
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                  }
             });
 
             // Smooth scrolling for anchor links
