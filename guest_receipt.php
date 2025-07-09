@@ -106,6 +106,26 @@ if ($is_ajax) {
                               <?php echo ucfirst($order['payment_method']); ?>
                         </div>
                   </div>
+                  <?php if ($order['payment_method'] === 'cash' && $order['amount_tendered'] > 0): ?>
+                        <div class="row">
+                              <div class="col-6">
+                                    <strong>Amount Tendered:</strong>
+                              </div>
+                              <div class="col-6 text-end">
+                                    $<?php echo number_format($order['amount_tendered'], 2); ?>
+                              </div>
+                        </div>
+                        <?php if ($order['change_amount'] > 0): ?>
+                              <div class="row">
+                                    <div class="col-6">
+                                          <strong>Change:</strong>
+                                    </div>
+                                    <div class="col-6 text-end">
+                                          $<?php echo number_format($order['change_amount'], 2); ?>
+                                    </div>
+                              </div>
+                        <?php endif; ?>
+                  <?php endif; ?>
                   <div class="row">
                         <div class="col-6">
                               <strong>Status:</strong>
@@ -217,6 +237,26 @@ if ($is_ajax) {
                                     <?php echo ucfirst($order['payment_method']); ?>
                               </div>
                         </div>
+                        <?php if ($order['payment_method'] === 'cash' && $order['amount_tendered'] > 0): ?>
+                              <div class="row">
+                                    <div class="col-6">
+                                          <strong>Amount Tendered:</strong>
+                                    </div>
+                                    <div class="col-6 text-end">
+                                          $<?php echo number_format($order['amount_tendered'], 2); ?>
+                                    </div>
+                              </div>
+                              <?php if ($order['change_amount'] > 0): ?>
+                                    <div class="row">
+                                          <div class="col-6">
+                                                <strong>Change:</strong>
+                                          </div>
+                                          <div class="col-6 text-end">
+                                                $<?php echo number_format($order['change_amount'], 2); ?>
+                                          </div>
+                                    </div>
+                              <?php endif; ?>
+                        <?php endif; ?>
                         <div class="row">
                               <div class="col-6">
                                     <strong>Status:</strong>

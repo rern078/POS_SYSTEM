@@ -18,6 +18,7 @@
                         <li class="nav-item"><a class="nav-link" href="pos.php"><i class="fas fa-cash-register"></i> POS</a></li>
                         <li class="nav-item"><a class="nav-link" href="products.php"><i class="fas fa-box"></i> Products</a></li>
                         <li class="nav-item"><a class="nav-link" href="orders.php"><i class="fas fa-shopping-basket"></i> Orders</a></li>
+                        <li class="nav-item"><a class="nav-link" href="receipts.php"><i class="fas fa-receipt"></i> Receipts</a></li>
                         <li class="nav-item"><a class="nav-link" href="reports.php"><i class="fas fa-file-alt"></i> Reports</a></li>
                   <?php endif; ?>
             </ul>

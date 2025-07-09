@@ -19,12 +19,22 @@ if (!$order_id) {
       die('Order ID is required');
 }
 
-// Get order information - ensure customer can only view their own orders
+// Get order information - allow staff to view any order, customers only their own
 $user = getCurrentUser();
-$stmt = $pdo->prepare("
-    SELECT * FROM orders WHERE id = ? AND (user_id = ? OR (user_id IS NULL AND customer_email = ?))
-");
-$stmt->execute([$order_id, $user['id'], $user['email']]);
+$is_staff = isset($_SESSION['role']) && in_array($_SESSION['role'], ['admin', 'manager', 'cashier']);
+
+if ($is_staff) {
+      // Staff can view any order
+      $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ?");
+      $stmt->execute([$order_id]);
+} else {
+      // Customers can only view their own orders
+      $stmt = $pdo->prepare("
+          SELECT * FROM orders WHERE id = ? AND (user_id = ? OR (user_id IS NULL AND customer_email = ?))
+      ");
+      $stmt->execute([$order_id, $user['id'], $user['email']]);
+}
+
 $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$order) {
@@ -90,6 +100,28 @@ if ($is_ajax) {
                   </div>
             </div>
 
+            <!-- Summary Card -->
+            <div class="my-3 p-3 rounded" style="background:#f3f6f9;max-width:350px;">
+                  <div class="fw-bold mb-2" style="font-size:1.1em;">Payment Method:
+                        <span class="float-end"><?php echo ucfirst($order['payment_method']); ?></span>
+                  </div>
+                  <?php if ($order['payment_method'] === 'cash' && $order['amount_tendered'] > 0): ?>
+                        <div class="fw-bold mb-2">Amount Tendered:
+                              <span class="float-end">$<?php echo number_format($order['amount_tendered'], 2); ?></span>
+                        </div>
+                        <div class="fw-bold mb-2">Change:
+                              <span class="float-end">$<?php echo number_format($order['change_amount'], 2); ?></span>
+                        </div>
+                  <?php endif; ?>
+                  <div class="fw-bold">Status:
+                        <span class="float-end">
+                              <span class="badge bg-<?php echo $order['status'] === 'completed' ? 'success' : 'warning'; ?>">
+                                    <?php echo ucfirst($order['status']); ?>
+                              </span>
+                        </span>
+                  </div>
+            </div>
+
             <h6 class="mt-4">Order Items</h6>
             <div class="table-responsive">
                   <table class="table table-sm">
@@ -125,6 +157,33 @@ if ($is_ajax) {
                                     <th class="text-end">$<?php echo number_format($order['total_amount'], 2); ?></th>
                               </tr>
                         </tfoot>
+                  </table>
+            </div>
+
+            <!-- Payment Information -->
+            <div class="mt-3">
+                  <h6>Payment Information</h6>
+                  <table class="table table-sm">
+                        <tr>
+                              <td><strong>Payment Method:</strong></td>
+                              <td><?php echo ucfirst($order['payment_method']); ?></td>
+                        </tr>
+                        <?php if ($order['payment_method'] === 'cash' && $order['amount_tendered'] > 0): ?>
+                              <tr>
+                                    <td><strong>Amount Tendered:</strong></td>
+                                    <td>$<?php echo number_format($order['amount_tendered'], 2); ?></td>
+                              </tr>
+                              <?php if ($order['change_amount'] > 0): ?>
+                                    <tr>
+                                          <td><strong>Change:</strong></td>
+                                          <td>$<?php echo number_format($order['change_amount'], 2); ?></td>
+                                    </tr>
+                              <?php endif; ?>
+                        <?php endif; ?>
+                        <tr>
+                              <td><strong>Status:</strong></td>
+                              <td><span class="badge bg-<?php echo $order['status'] === 'completed' ? 'success' : 'warning'; ?>"><?php echo ucfirst($order['status']); ?></span></td>
+                        </tr>
                   </table>
             </div>
       </div>
@@ -254,6 +313,26 @@ if ($is_ajax) {
                                     <?php echo ucfirst($order['payment_method']); ?>
                               </div>
                         </div>
+                        <?php if ($order['payment_method'] === 'cash' && $order['amount_tendered'] > 0): ?>
+                              <div class="row">
+                                    <div class="col-6">
+                                          <strong>Amount Tendered:</strong>
+                                    </div>
+                                    <div class="col-6 text-end">
+                                          $<?php echo number_format($order['amount_tendered'], 2); ?>
+                                    </div>
+                              </div>
+                              <?php if ($order['change_amount'] > 0): ?>
+                                    <div class="row">
+                                          <div class="col-6">
+                                                <strong>Change:</strong>
+                                          </div>
+                                          <div class="col-6 text-end">
+                                                $<?php echo number_format($order['change_amount'], 2); ?>
+                                          </div>
+                                    </div>
+                              <?php endif; ?>
+                        <?php endif; ?>
                         <div class="row">
                               <div class="col-6">
                                     <strong>Status:</strong>

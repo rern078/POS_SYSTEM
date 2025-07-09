@@ -68,6 +68,11 @@ $top_products = getTopProducts(5);
                                     </a>
                               </li>
                               <li class="nav-item">
+                                    <a class="nav-link" href="receipts.php">
+                                          <i class="fas fa-receipt me-1"></i>Receipts
+                                    </a>
+                              </li>
+                              <li class="nav-item">
                                     <a class="nav-link active" href="reports.php">
                                           <i class="fas fa-chart-bar me-1"></i>Reports
                                     </a>

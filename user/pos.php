@@ -118,11 +118,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   $customer_name = trim($_POST['customer_name']);
                   $customer_email = trim($_POST['customer_email']);
                   $payment_method = $_POST['payment_method'];
+                  $amount_tendered = isset($_POST['amount_tendered']) ? (float)$_POST['amount_tendered'] : 0;
+                  $change_amount = isset($_POST['change_amount']) ? (float)$_POST['change_amount'] : 0;
                   $total_amount = 0;
 
                   // Calculate total
                   foreach ($_SESSION['cart'] as $item) {
                         $total_amount += $item['price'] * $item['quantity'];
+                  }
+
+                  // Validate cash payment
+                  if ($payment_method === 'cash') {
+                        if ($amount_tendered < $total_amount) {
+                              echo json_encode(['success' => false, 'message' => 'Amount tendered must be equal to or greater than total amount']);
+                              exit;
+                        }
                   }
 
                   try {
@@ -133,9 +143,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer') {
                               $user_id = $_SESSION['user_id'];
                         }
-                        
-                        $stmt = $pdo->prepare("INSERT INTO orders (user_id, customer_name, customer_email, total_amount, payment_method, status) VALUES (?, ?, ?, ?, ?, 'completed')");
-                        $stmt->execute([$user_id, $customer_name, $customer_email, $total_amount, $payment_method]);
+
+                        $stmt = $pdo->prepare("INSERT INTO orders (user_id, customer_name, customer_email, total_amount, payment_method, amount_tendered, change_amount, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'completed')");
+                        $stmt->execute([$user_id, $customer_name, $customer_email, $total_amount, $payment_method, $amount_tendered, $change_amount]);
                         $order_id = $pdo->lastInsertId();
 
                         // Add order items and update stock
@@ -496,6 +506,11 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                           <i class="fas fa-shopping-cart me-1"></i>Orders
                                     </a>
                               </li>
+                              <li class="nav-item">
+                                    <a class="nav-link" href="receipts.php">
+                                          <i class="fas fa-receipt me-1"></i>Receipts
+                                    </a>
+                              </li>
                               <?php if (isManager()): ?>
                                     <li class="nav-item">
                                           <a class="nav-link" href="reports.php">
@@ -743,7 +758,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
       <!-- Payment Modal -->
       <div class="modal fade" id="paymentModal" tabindex="-1">
-            <div class="modal-dialog">
+            <div class="modal-dialog modal-lg">
                   <div class="modal-content">
                         <div class="modal-header">
                               <h5 class="modal-title">Process Payment</h5>
@@ -751,30 +766,86 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         </div>
                         <form id="paymentForm">
                               <div class="modal-body">
-                                    <div class="mb-3">
-                                          <label for="customer_name" class="form-label">Customer Name</label>
-                                          <input type="text" class="form-control" id="customer_name" name="customer_name" required>
-                                    </div>
-                                    <div class="mb-3">
-                                          <label for="customer_email" class="form-label">Customer Email</label>
-                                          <input type="email" class="form-control" id="customer_email" name="customer_email">
-                                    </div>
-                                    <div class="mb-3">
-                                          <label for="payment_method" class="form-label">Payment Method</label>
-                                          <select class="form-select" id="payment_method" name="payment_method" required>
-                                                <option value="cash">Cash</option>
-                                                <option value="card">Credit/Debit Card</option>
-                                                <option value="mobile">Mobile Payment</option>
-                                                <option value="other">Other</option>
-                                          </select>
-                                    </div>
-                                    <div class="alert alert-info">
-                                          <strong>Total Amount: $<span id="modal-total">0.00</span></strong>
+                                    <div class="row">
+                                          <div class="col-md-6">
+                                                <div class="mb-3">
+                                                      <label for="customer_name" class="form-label">Customer Name</label>
+                                                      <input type="text" class="form-control" id="customer_name" name="customer_name" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                      <label for="customer_email" class="form-label">Customer Email</label>
+                                                      <input type="email" class="form-control" id="customer_email" name="customer_email">
+                                                </div>
+                                                <div class="mb-3">
+                                                      <label for="payment_method" class="form-label">Payment Method</label>
+                                                      <select class="form-select" id="payment_method" name="payment_method" required onchange="toggleCashFields()">
+                                                            <option value="cash">Cash</option>
+                                                            <option value="card">Credit/Debit Card</option>
+                                                            <option value="mobile">Mobile Payment</option>
+                                                            <option value="other">Other</option>
+                                                      </select>
+                                                </div>
+                                          </div>
+                                          <div class="col-md-6">
+                                                <div class="payment-summary">
+                                                      <h6 class="text-primary mb-3">Payment Summary</h6>
+                                                      <div class="alert alert-info">
+                                                            <strong>Total Amount: $<span id="modal-total">0.00</span></strong>
+                                                      </div>
+
+                                                      <!-- Cash Payment Fields -->
+                                                      <div id="cash-fields" style="display: none;">
+                                                            <div class="mb-3">
+                                                                  <label for="amount_tendered" class="form-label">Amount Tendered</label>
+                                                                  <div class="input-group">
+                                                                        <span class="input-group-text">$</span>
+                                                                        <input type="number"
+                                                                              class="form-control"
+                                                                              id="amount_tendered"
+                                                                              name="amount_tendered"
+                                                                              step="0.01"
+                                                                              min="0"
+                                                                              placeholder="0.00"
+                                                                              onchange="calculateChange()"
+                                                                              onkeyup="calculateChange()">
+                                                                  </div>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                  <label for="change_amount" class="form-label">Change</label>
+                                                                  <div class="input-group">
+                                                                        <span class="input-group-text">$</span>
+                                                                        <input type="text"
+                                                                              class="form-control"
+                                                                              id="change_amount"
+                                                                              name="change_amount"
+                                                                              readonly
+                                                                              style="background-color: #f8f9fa; font-weight: bold;">
+                                                                  </div>
+                                                            </div>
+                                                            <div class="alert alert-warning" id="insufficient-amount" style="display: none;">
+                                                                  <i class="fas fa-exclamation-triangle me-2"></i>
+                                                                  <small>Amount tendered is less than total amount!</small>
+                                                            </div>
+                                                      </div>
+
+                                                      <!-- Quick Amount Buttons for Cash -->
+                                                      <div id="quick-amounts" style="display: none;" class="mb-3">
+                                                            <label class="form-label">Quick Amounts</label>
+                                                            <div class="d-flex flex-wrap gap-2">
+                                                                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setQuickAmount(5)">$5</button>
+                                                                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setQuickAmount(10)">$10</button>
+                                                                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setQuickAmount(20)">$20</button>
+                                                                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setQuickAmount(50)">$50</button>
+                                                                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setQuickAmount(100)">$100</button>
+                                                            </div>
+                                                      </div>
+                                                </div>
+                                          </div>
                                     </div>
                               </div>
                               <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="submit" class="btn btn-success">
+                                    <button type="submit" class="btn btn-success" id="complete-payment-btn">
                                           <i class="fas fa-check me-2"></i>Complete Payment
                                     </button>
                               </div>
@@ -958,7 +1029,98 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
             function showPaymentModal() {
                   const total = document.getElementById('cart-total').textContent;
                   document.getElementById('modal-total').textContent = total.replace('$', '');
+
+                  // Reset cash fields when opening modal
+                  document.getElementById('amount_tendered').value = '';
+                  document.getElementById('change_amount').value = '';
+                  document.getElementById('insufficient-amount').style.display = 'none';
+
+                  // Show/hide cash fields based on payment method
+                  toggleCashFields();
+
+                  // Show the modal
                   new bootstrap.Modal(document.getElementById('paymentModal')).show();
+
+                  // --- ADD THIS: Attach event listeners every time modal opens ---
+                  const amountTendered = document.getElementById('amount_tendered');
+                  if (amountTendered) {
+                        amountTendered.removeEventListener('input', calculateChange); // Prevent duplicate listeners
+                        amountTendered.addEventListener('input', calculateChange);
+                        amountTendered.removeEventListener('change', calculateChange);
+                        amountTendered.addEventListener('change', calculateChange);
+                  }
+
+                  // Calculate change immediately in case a quick amount is clicked
+                  calculateChange();
+            }
+
+            function toggleCashFields() {
+                  const paymentMethod = document.getElementById('payment_method').value;
+                  const cashFields = document.getElementById('cash-fields');
+                  const quickAmounts = document.getElementById('quick-amounts');
+                  const amountTendered = document.getElementById('amount_tendered');
+                  const changeAmount = document.getElementById('change_amount');
+                  const insufficientAmount = document.getElementById('insufficient-amount');
+
+                  if (paymentMethod === 'cash') {
+                        cashFields.style.display = 'block';
+                        quickAmounts.style.display = 'block';
+                        amountTendered.setAttribute('required', 'required');
+                        changeAmount.setAttribute('readonly', 'readonly');
+                        changeAmount.value = '';
+                        insufficientAmount.style.display = 'none';
+                  } else {
+                        cashFields.style.display = 'none';
+                        quickAmounts.style.display = 'none';
+                        amountTendered.removeAttribute('required');
+                        changeAmount.setAttribute('readonly', 'readonly');
+                        changeAmount.value = '';
+                        insufficientAmount.style.display = 'none';
+                  }
+            }
+
+            function setQuickAmount(amount) {
+                  document.getElementById('amount_tendered').value = amount;
+                  calculateChange();
+            }
+
+            function calculateChange() {
+                  const totalAmountElement = document.getElementById('modal-total');
+                  const amountTenderedElement = document.getElementById('amount_tendered');
+                  const changeAmount = document.getElementById('change_amount');
+                  const insufficientAmount = document.getElementById('insufficient-amount');
+                  const completeBtn = document.getElementById('complete-payment-btn');
+
+                  if (!totalAmountElement || !amountTenderedElement || !changeAmount) {
+                        console.error('Required elements not found');
+                        return;
+                  }
+
+                  const totalAmount = parseFloat(totalAmountElement.textContent.trim());
+                  const amountTendered = parseFloat(amountTenderedElement.value.trim()) || 0;
+
+                  console.log('Total Amount:', totalAmount);
+                  console.log('Amount Tendered:', amountTendered);
+
+                  if (isNaN(totalAmount) || isNaN(amountTendered)) {
+                        changeAmount.value = '';
+                        insufficientAmount.style.display = 'none';
+                        if (completeBtn) completeBtn.disabled = false;
+                        return;
+                  }
+
+                  const change = amountTendered - totalAmount;
+                  console.log('Calculated Change:', change);
+
+                  changeAmount.value = change >= 0 ? change.toFixed(2) : '';
+
+                  if (change < 0) {
+                        insufficientAmount.style.display = 'block';
+                        if (completeBtn) completeBtn.disabled = true;
+                  } else {
+                        insufficientAmount.style.display = 'none';
+                        if (completeBtn) completeBtn.disabled = false;
+                  }
             }
 
             function clearFilters() {
@@ -1231,7 +1393,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                   }, 3000);
             }
 
-            // Handle scanner input enter key
+            // Handle scanner input enter key and payment form events
             document.addEventListener('DOMContentLoaded', function() {
                   const scannerInput = document.getElementById('scanner-input');
                   if (scannerInput) {
@@ -1240,6 +1402,19 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                     searchByCode();
                               }
                         });
+                  }
+
+                  // Add event listeners for payment form
+                  const paymentMethod = document.getElementById('payment_method');
+                  const amountTendered = document.getElementById('amount_tendered');
+
+                  if (paymentMethod) {
+                        paymentMethod.addEventListener('change', toggleCashFields);
+                  }
+
+                  if (amountTendered) {
+                        amountTendered.addEventListener('input', calculateChange);
+                        amountTendered.addEventListener('change', calculateChange);
                   }
             });
       </script>

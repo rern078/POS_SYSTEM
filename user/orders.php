@@ -109,6 +109,11 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                           <i class="fas fa-shopping-cart me-1"></i>Orders
                                     </a>
                               </li>
+                              <li class="nav-item">
+                                    <a class="nav-link" href="receipts.php">
+                                          <i class="fas fa-receipt me-1"></i>Receipts
+                                    </a>
+                              </li>
                               <?php if (isManager()): ?>
                                     <li class="nav-item">
                                           <a class="nav-link" href="reports.php">

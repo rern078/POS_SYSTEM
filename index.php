@@ -111,11 +111,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   $customer_name = trim($_POST['customer_name']);
                   $customer_email = trim($_POST['customer_email']);
                   $payment_method = $_POST['payment_method'];
+                  $amount_tendered = isset($_POST['amount_tendered']) ? (float)$_POST['amount_tendered'] : 0;
+                  $change_amount = isset($_POST['change_amount']) ? (float)$_POST['change_amount'] : 0;
                   $total_amount = 0;
 
                   // Calculate total
                   foreach ($_SESSION['guest_cart'] as $item) {
                         $total_amount += $item['price'] * $item['quantity'];
+                  }
+
+                  // Validate cash payment
+                  if ($payment_method === 'cash') {
+                        if ($amount_tendered < $total_amount) {
+                              echo json_encode(['success' => false, 'message' => 'Amount tendered must be equal to or greater than total amount']);
+                              exit;
+                        }
                   }
 
                   try {
@@ -128,8 +138,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                               $user_id = $_SESSION['user_id'];
                         }
 
-                        $stmt = $pdo->prepare("INSERT INTO orders (user_id, customer_name, customer_email, total_amount, payment_method, status) VALUES (?, ?, ?, ?, ?, 'completed')");
-                        $stmt->execute([$user_id, $customer_name, $customer_email, $total_amount, $payment_method]);
+                        $stmt = $pdo->prepare("INSERT INTO orders (user_id, customer_name, customer_email, total_amount, payment_method, amount_tendered, change_amount, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'completed')");
+                        $stmt->execute([$user_id, $customer_name, $customer_email, $total_amount, $payment_method, $amount_tendered, $change_amount]);
                         $order_id = $pdo->lastInsertId();
 
                         // Add order items and update stock
@@ -799,7 +809,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
       <!-- Payment Modal -->
       <div class="modal fade" id="paymentModal" tabindex="-1">
-            <div class="modal-dialog">
+            <div class="modal-dialog modal-lg">
                   <div class="modal-content">
                         <div class="modal-header">
                               <h5 class="modal-title">Complete Your Order</h5>
@@ -807,87 +817,143 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         </div>
                         <form id="paymentForm">
                               <div class="modal-body">
-                                    <?php if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'customer'): ?>
-                                          <!-- Customer Login Option - Only show for non-logged-in users -->
-                                          <div class="mb-3">
-                                                <div class="alert alert-info">
-                                                      <i class="fas fa-info-circle me-2"></i>
-                                                      <strong>Optional:</strong> Login to save your order history and get faster checkout next time.
-                                                </div>
-                                                <div class="d-flex gap-2 mb-3">
-                                                      <button type="button" class="btn btn-outline-primary btn-sm" onclick="showCustomerLogin()">
-                                                            <i class="fas fa-sign-in-alt me-2"></i>Login as Customer
-                                                      </button>
-                                                      <button type="button" class="btn btn-outline-success btn-sm" onclick="showCustomerRegister()">
-                                                            <i class="fas fa-user-plus me-2"></i>Register as Customer
-                                                      </button>
-                                                </div>
-                                                <div class="text-center">
-                                                      <small class="text-muted">
-                                                            <i class="fas fa-arrow-down me-1"></i>Or continue as guest below
-                                                      </small>
-                                                </div>
-                                          </div>
-                                    <?php else: ?>
-                                          <!-- Customer Info Display - Show for logged-in customers -->
-                                          <div class="mb-3">
-                                                <div class="alert alert-success">
-                                                      <i class="fas fa-check-circle me-2"></i>
-                                                      <strong>Welcome back!</strong> Your information will be automatically filled.
-                                                </div>
-                                          </div>
-                                    <?php endif; ?>
+                                    <div class="row">
+                                          <div class="col-md-6">
+                                                <?php if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'customer'): ?>
+                                                      <!-- Customer Login Option - Only show for non-logged-in users -->
+                                                      <div class="mb-3">
+                                                            <div class="alert alert-info">
+                                                                  <i class="fas fa-info-circle me-2"></i>
+                                                                  <strong>Optional:</strong> Login to save your order history and get faster checkout next time.
+                                                            </div>
+                                                            <div class="d-flex gap-2 mb-3">
+                                                                  <button type="button" class="btn btn-outline-primary btn-sm" onclick="showCustomerLogin()">
+                                                                        <i class="fas fa-sign-in-alt me-2"></i>Login as Customer
+                                                                  </button>
+                                                                  <button type="button" class="btn btn-outline-success btn-sm" onclick="showCustomerRegister()">
+                                                                        <i class="fas fa-user-plus me-2"></i>Register as Customer
+                                                                  </button>
+                                                            </div>
+                                                            <div class="text-center">
+                                                                  <small class="text-muted">
+                                                                        <i class="fas fa-arrow-down me-1"></i>Or continue as guest below
+                                                                  </small>
+                                                            </div>
+                                                      </div>
+                                                <?php else: ?>
+                                                      <!-- Customer Info Display - Show for logged-in customers -->
+                                                      <div class="mb-3">
+                                                            <div class="alert alert-success">
+                                                                  <i class="fas fa-check-circle me-2"></i>
+                                                                  <strong>Welcome back!</strong> Your information will be automatically filled.
+                                                            </div>
+                                                      </div>
+                                                <?php endif; ?>
 
-                                    <div class="mb-3">
-                                          <label for="customer_name" class="form-label">Full Name *</label>
-                                          <input type="text" class="form-control" id="customer_name" name="customer_name"
-                                                value="<?php
-                                                            if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer') {
-                                                                  // Try to get full_name from database
-                                                                  try {
-                                                                        $pdo = getDBConnection();
-                                                                        $stmt = $pdo->prepare("SELECT full_name FROM users WHERE id = ?");
-                                                                        $stmt->execute([$_SESSION['user_id']]);
-                                                                        $full_name = $stmt->fetchColumn();
-                                                                        // Use full_name if it exists and is not empty, otherwise use username
-                                                                        echo htmlspecialchars(trim($full_name) ?: $_SESSION['username']);
-                                                                  } catch (Exception $e) {
-                                                                        echo htmlspecialchars($_SESSION['username']);
-                                                                  }
-                                                            }
-                                                            ?>"
-                                                <?php echo isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer' ? 'readonly' : ''; ?>
-                                                required>
-                                          <?php if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer'): ?>
-                                                <small class="text-muted">
-                                                      <i class="fas fa-user-check me-1"></i>Your name from your account
-                                                </small>
-                                          <?php endif; ?>
-                                    </div>
-                                    <div class="mb-3">
-                                          <label for="customer_email" class="form-label">Email Address *</label>
-                                          <input type="email" class="form-control" id="customer_email" name="customer_email"
-                                                value="<?php echo isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer' ? htmlspecialchars($_SESSION['email']) : ''; ?>"
-                                                <?php echo isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer' ? 'readonly' : ''; ?>
-                                                required>
-                                          <?php if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer'): ?>
-                                                <small class="text-muted">
-                                                      <i class="fas fa-envelope-check me-1"></i>Your email from your account
-                                                </small>
-                                          <?php endif; ?>
-                                    </div>
-                                    <div class="mb-3">
-                                          <label for="payment_method" class="form-label">Payment Method *</label>
-                                          <select class="form-select" id="payment_method" name="payment_method" required>
-                                                <option value="">Select payment method</option>
-                                                <option value="cash">Cash on Delivery</option>
-                                                <option value="card">Credit/Debit Card</option>
-                                                <option value="mobile">Mobile Payment</option>
-                                                <option value="bank">Bank Transfer</option>
-                                          </select>
-                                    </div>
-                                    <div class="alert alert-info">
-                                          <strong>Total Amount: $<span id="modal-total">0.00</span></strong>
+                                                <div class="mb-3">
+                                                      <label for="customer_name" class="form-label">Full Name *</label>
+                                                      <input type="text" class="form-control" id="customer_name" name="customer_name"
+                                                            value="<?php
+                                                                      if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer') {
+                                                                            // Try to get full_name from database
+                                                                            try {
+                                                                                  $pdo = getDBConnection();
+                                                                                  $stmt = $pdo->prepare("SELECT full_name FROM users WHERE id = ?");
+                                                                                  $stmt->execute([$_SESSION['user_id']]);
+                                                                                  $full_name = $stmt->fetchColumn();
+                                                                                  // Use full_name if it exists and is not empty, otherwise use username
+                                                                                  echo htmlspecialchars(trim($full_name) ?: $_SESSION['username']);
+                                                                            } catch (Exception $e) {
+                                                                                  echo htmlspecialchars($_SESSION['username']);
+                                                                            }
+                                                                      }
+                                                                      ?>"
+                                                            <?php echo isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer' ? 'readonly' : ''; ?>
+                                                            required>
+                                                      <?php if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer'): ?>
+                                                            <small class="text-muted">
+                                                                  <i class="fas fa-user-check me-1"></i>Your name from your account
+                                                            </small>
+                                                      <?php endif; ?>
+                                                </div>
+                                                <div class="mb-3">
+                                                      <label for="customer_email" class="form-label">Email Address *</label>
+                                                      <input type="email" class="form-control" id="customer_email" name="customer_email"
+                                                            value="<?php echo isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer' ? htmlspecialchars($_SESSION['email']) : ''; ?>"
+                                                            <?php echo isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer' ? 'readonly' : ''; ?>
+                                                            required>
+                                                      <?php if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer'): ?>
+                                                            <small class="text-muted">
+                                                                  <i class="fas fa-envelope-check me-1"></i>Your email from your account
+                                                            </small>
+                                                      <?php endif; ?>
+                                                </div>
+                                                <div class="mb-3">
+                                                      <label for="payment_method" class="form-label">Payment Method *</label>
+                                                      <select class="form-select" id="payment_method" name="payment_method" required onchange="toggleGuestCashFields()">
+                                                            <option value="">Select payment method</option>
+                                                            <option value="cash">Cash on Delivery</option>
+                                                            <option value="card">Credit/Debit Card</option>
+                                                            <option value="mobile">Mobile Payment</option>
+                                                            <option value="bank">Bank Transfer</option>
+                                                      </select>
+                                                </div>
+                                          </div>
+                                          <div class="col-md-6">
+                                                <div class="payment-summary">
+                                                      <h6 class="text-primary mb-3">Payment Summary</h6>
+                                                      <div class="alert alert-info">
+                                                            <strong>Total Amount: $<span id="modal-total">0.00</span></strong>
+                                                      </div>
+                                                      
+                                                      <!-- Cash Payment Fields -->
+                                                      <div id="guest-cash-fields" style="display: none;">
+                                                            <div class="mb-3">
+                                                                  <label for="guest_amount_tendered" class="form-label">Amount Tendered</label>
+                                                                  <div class="input-group">
+                                                                        <span class="input-group-text">$</span>
+                                                                        <input type="number" 
+                                                                               class="form-control" 
+                                                                               id="guest_amount_tendered" 
+                                                                               name="amount_tendered" 
+                                                                               step="0.01" 
+                                                                               min="0" 
+                                                                               placeholder="0.00"
+                                                                               onchange="calculateGuestChange()"
+                                                                               onkeyup="calculateGuestChange()">
+                                                                  </div>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                  <label for="guest_change_amount" class="form-label">Change</label>
+                                                                  <div class="input-group">
+                                                                        <span class="input-group-text">$</span>
+                                                                        <input type="text" 
+                                                                               class="form-control" 
+                                                                               id="guest_change_amount" 
+                                                                               name="change_amount" 
+                                                                               readonly 
+                                                                               style="background-color: #f8f9fa; font-weight: bold;">
+                                                                  </div>
+                                                            </div>
+                                                            <div class="alert alert-warning" id="guest-insufficient-amount" style="display: none;">
+                                                                  <i class="fas fa-exclamation-triangle me-2"></i>
+                                                                  <small>Amount tendered is less than total amount!</small>
+                                                            </div>
+                                                      </div>
+                                                      
+                                                      <!-- Quick Amount Buttons for Cash -->
+                                                      <div id="guest-quick-amounts" style="display: none;" class="mb-3">
+                                                            <label class="form-label">Quick Amounts</label>
+                                                            <div class="d-flex flex-wrap gap-2">
+                                                                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setGuestQuickAmount(5)">$5</button>
+                                                                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setGuestQuickAmount(10)">$10</button>
+                                                                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setGuestQuickAmount(20)">$20</button>
+                                                                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setGuestQuickAmount(50)">$50</button>
+                                                                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setGuestQuickAmount(100)">$100</button>
+                                                            </div>
+                                                      </div>
+                                                </div>
+                                          </div>
                                     </div>
                                     <div class="alert alert-warning">
                                           <i class="fas fa-info-circle me-2"></i>
@@ -896,7 +962,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                               </div>
                               <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="submit" class="btn btn-success">
+                                    <button type="submit" class="btn btn-success" id="guest-complete-payment-btn">
                                           <i class="fas fa-check me-2"></i>Complete Order
                                     </button>
                               </div>
@@ -1237,6 +1303,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
                   try {
                         document.getElementById('modal-total').textContent = total.replace('$', '');
+                        
+                        // Reset cash fields when opening modal
+                        document.getElementById('guest_amount_tendered').value = '';
+                        document.getElementById('guest_change_amount').value = '';
+                        document.getElementById('guest-insufficient-amount').style.display = 'none';
+                        
+                        // Show/hide cash fields based on payment method
+                        toggleGuestCashFields();
+                        
                         const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
                         paymentModal.show();
                         console.log('Payment modal opened successfully'); // Debug log
@@ -1273,6 +1348,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                               console.log('Checkout button re-enabled'); // Debug log
                         }
                   }, 1000);
+            }
+
+            function toggleGuestCashFields() {
+                  const paymentMethod = document.getElementById('payment_method').value;
+                  const cashFields = document.getElementById('guest-cash-fields');
+                  const quickAmounts = document.getElementById('guest-quick-amounts');
+                  const amountTendered = document.getElementById('guest_amount_tendered');
+                  const changeAmount = document.getElementById('guest_change_amount');
+                  const insufficientAmount = document.getElementById('guest-insufficient-amount');
+
+                  if (paymentMethod === 'cash') {
+                        cashFields.style.display = 'block';
+                        quickAmounts.style.display = 'block';
+                        amountTendered.setAttribute('required', 'required');
+                        changeAmount.setAttribute('readonly', 'readonly');
+                        changeAmount.value = '';
+                        insufficientAmount.style.display = 'none';
+                  } else {
+                        cashFields.style.display = 'none';
+                        quickAmounts.style.display = 'none';
+                        amountTendered.removeAttribute('required');
+                        changeAmount.setAttribute('readonly', 'readonly');
+                        changeAmount.value = '';
+                        insufficientAmount.style.display = 'none';
+                  }
+            }
+
+            function setGuestQuickAmount(amount) {
+                  document.getElementById('guest_amount_tendered').value = amount;
+                  calculateGuestChange();
+            }
+
+            function calculateGuestChange() {
+                  const totalAmount = parseFloat(document.getElementById('modal-total').textContent);
+                  const amountTendered = parseFloat(document.getElementById('guest_amount_tendered').value) || 0;
+                  const changeAmount = document.getElementById('guest_change_amount');
+                  const insufficientAmount = document.getElementById('guest-insufficient-amount');
+                  const completeBtn = document.getElementById('guest-complete-payment-btn');
+
+                  if (isNaN(totalAmount) || isNaN(amountTendered)) {
+                        changeAmount.value = '';
+                        insufficientAmount.style.display = 'none';
+                        completeBtn.disabled = false;
+                        return;
+                  }
+
+                  const change = amountTendered - totalAmount;
+                  changeAmount.value = change >= 0 ? change.toFixed(2) : '';
+
+                  if (change < 0) {
+                        insufficientAmount.style.display = 'block';
+                        completeBtn.disabled = true;
+                  } else {
+                        insufficientAmount.style.display = 'none';
+                        completeBtn.disabled = false;
+                  }
             }
 
             function showNotification(message, type) {
