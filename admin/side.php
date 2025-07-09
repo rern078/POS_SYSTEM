@@ -98,6 +98,12 @@
                                     <span>Expenses</span>
                               </a>
                         </li>
+                        <li class="sidebar-nav-item">
+                              <a class="sidebar-nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'exchange_rates.php' ? 'active' : ''; ?>" href="exchange_rates.php">
+                                    <i class="fas fa-exchange-alt"></i>
+                                    <span>Exchange Rates</span>
+                              </a>
+                        </li>
                   </ul>
             </div>
 

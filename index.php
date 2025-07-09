@@ -1,6 +1,10 @@
 <?php
 session_start();
 require_once 'config/database.php';
+require_once 'includes/exchange_rate.php';
+
+// Initialize exchange rate handler
+$exchangeRate = new ExchangeRate();
 
 // Check if user is already logged in
 if (isset($_SESSION['user_id'])) {
@@ -111,6 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   $customer_name = trim($_POST['customer_name']);
                   $customer_email = trim($_POST['customer_email']);
                   $payment_method = $_POST['payment_method'];
+                  $currency_code = isset($_POST['currency_code']) ? $_POST['currency_code'] : 'USD';
                   $amount_tendered = isset($_POST['amount_tendered']) ? (float)$_POST['amount_tendered'] : 0;
                   $change_amount = isset($_POST['change_amount']) ? (float)$_POST['change_amount'] : 0;
                   $total_amount = 0;
@@ -138,15 +143,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                               $user_id = $_SESSION['user_id'];
                         }
 
-                        $stmt = $pdo->prepare("INSERT INTO orders (user_id, customer_name, customer_email, total_amount, payment_method, amount_tendered, change_amount, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'completed')");
-                        $stmt->execute([$user_id, $customer_name, $customer_email, $total_amount, $payment_method, $amount_tendered, $change_amount]);
+                        // Get exchange rate for the selected currency
+                        $exchange_rate = $exchangeRate->getExchangeRate('USD', $currency_code);
+                        $original_amount = $total_amount; // Store original USD amount
+
+                        // Convert total amount to selected currency
+                        $converted_total = $exchangeRate->convertCurrency($total_amount, 'USD', $currency_code);
+
+                        $stmt = $pdo->prepare("INSERT INTO orders (user_id, customer_name, customer_email, total_amount, currency_code, exchange_rate, original_amount, payment_method, amount_tendered, change_amount, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed')");
+                        $stmt->execute([$user_id, $customer_name, $customer_email, $converted_total, $currency_code, $exchange_rate, $original_amount, $payment_method, $amount_tendered, $change_amount]);
                         $order_id = $pdo->lastInsertId();
 
                         // Add order items and update stock
                         foreach ($_SESSION['guest_cart'] as $product_id => $item) {
+                              // Convert item price to selected currency
+                              $converted_price = $exchangeRate->convertCurrency($item['price'], 'USD', $currency_code);
+
                               // Add order item
-                              $stmt = $pdo->prepare("INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)");
-                              $stmt->execute([$order_id, $product_id, $item['quantity'], $item['price']]);
+                              $stmt = $pdo->prepare("INSERT INTO order_items (order_id, product_id, quantity, price, currency_code, exchange_rate) VALUES (?, ?, ?, ?, ?, ?)");
+                              $stmt->execute([$order_id, $product_id, $item['quantity'], $converted_price, $currency_code, $exchange_rate]);
 
                               // Update stock
                               $stmt = $pdo->prepare("UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?");
@@ -241,6 +256,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             case 'clear_guest_cart':
                   $_SESSION['guest_cart'] = [];
                   echo json_encode(['success' => true, 'message' => 'Cart cleared successfully']);
+                  exit;
+
+            case 'get_currencies':
+                  $currencies = $exchangeRate->getCurrencies();
+                  echo json_encode(['success' => true, 'currencies' => $currencies]);
+                  exit;
+
+            case 'convert_currency':
+                  try {
+                        $amount = (float)$_POST['amount'];
+                        $from_currency = $_POST['from_currency'];
+                        $to_currency = $_POST['to_currency'];
+
+                        $converted_amount = $exchangeRate->convertCurrency($amount, $from_currency, $to_currency);
+                        $formatted_amount = $exchangeRate->formatAmount($converted_amount, $to_currency);
+
+                        echo json_encode([
+                              'success' => true,
+                              'converted_amount' => $converted_amount,
+                              'formatted_amount' => $formatted_amount,
+                              'rate' => $exchangeRate->getExchangeRate($from_currency, $to_currency)
+                        ]);
+                  } catch (Exception $e) {
+                        echo json_encode([
+                              'success' => false,
+                              'message' => 'Currency conversion error: ' . $e->getMessage()
+                        ]);
+                  }
                   exit;
       }
 }
@@ -854,20 +897,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                                       <label for="customer_name" class="form-label">Full Name *</label>
                                                       <input type="text" class="form-control" id="customer_name" name="customer_name"
                                                             value="<?php
-                                                                      if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer') {
-                                                                            // Try to get full_name from database
-                                                                            try {
-                                                                                  $pdo = getDBConnection();
-                                                                                  $stmt = $pdo->prepare("SELECT full_name FROM users WHERE id = ?");
-                                                                                  $stmt->execute([$_SESSION['user_id']]);
-                                                                                  $full_name = $stmt->fetchColumn();
-                                                                                  // Use full_name if it exists and is not empty, otherwise use username
-                                                                                  echo htmlspecialchars(trim($full_name) ?: $_SESSION['username']);
-                                                                            } catch (Exception $e) {
-                                                                                  echo htmlspecialchars($_SESSION['username']);
-                                                                            }
-                                                                      }
-                                                                      ?>"
+                                                                        if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer') {
+                                                                              // Try to get full_name from database
+                                                                              try {
+                                                                                    $pdo = getDBConnection();
+                                                                                    $stmt = $pdo->prepare("SELECT full_name FROM users WHERE id = ?");
+                                                                                    $stmt->execute([$_SESSION['user_id']]);
+                                                                                    $full_name = $stmt->fetchColumn();
+                                                                                    // Use full_name if it exists and is not empty, otherwise use username
+                                                                                    echo htmlspecialchars(trim($full_name) ?: $_SESSION['username']);
+                                                                              } catch (Exception $e) {
+                                                                                    echo htmlspecialchars($_SESSION['username']);
+                                                                              }
+                                                                        }
+                                                                        ?>"
                                                             <?php echo isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer' ? 'readonly' : ''; ?>
                                                             required>
                                                       <?php if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer'): ?>
@@ -889,6 +932,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                                       <?php endif; ?>
                                                 </div>
                                                 <div class="mb-3">
+                                                      <label for="currency_code" class="form-label">Currency *</label>
+                                                      <select class="form-select" id="currency_code" name="currency_code" required onchange="updateCurrencyDisplay()">
+                                                            <option value="">Select currency</option>
+                                                            <?php
+                                                            $currencies = $exchangeRate->getCurrencies();
+                                                            foreach ($currencies as $currency) {
+                                                                  $selected = $currency['is_default'] ? 'selected' : '';
+                                                                  echo "<option value='{$currency['code']}' {$selected}>{$currency['name']} ({$currency['symbol']})</option>";
+                                                            }
+                                                            ?>
+                                                      </select>
+                                                </div>
+                                                <div class="mb-3">
                                                       <label for="payment_method" class="form-label">Payment Method *</label>
                                                       <select class="form-select" id="payment_method" name="payment_method" required onchange="toggleGuestCashFields()">
                                                             <option value="">Select payment method</option>
@@ -903,36 +959,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                                 <div class="payment-summary">
                                                       <h6 class="text-primary mb-3">Payment Summary</h6>
                                                       <div class="alert alert-info">
-                                                            <strong>Total Amount: $<span id="modal-total">0.00</span></strong>
+                                                            <div class="d-flex justify-content-between align-items-center">
+                                                                  <strong>Total Amount:</strong>
+                                                                  <span id="modal-total-display">$0.00</span>
+                                                            </div>
+                                                            <div class="mt-2">
+                                                                  <small class="text-muted">
+                                                                        <span id="exchange-rate-info" style="display: none;">
+                                                                              Exchange Rate: <span id="current-rate">1.00</span>
+                                                                        </span>
+                                                                  </small>
+                                                            </div>
+                                                            <!-- Hidden element to store USD total for calculations -->
+                                                            <span id="modal-total" style="display: none;">0.00</span>
                                                       </div>
-                                                      
+
                                                       <!-- Cash Payment Fields -->
                                                       <div id="guest-cash-fields" style="display: none;">
                                                             <div class="mb-3">
                                                                   <label for="guest_amount_tendered" class="form-label">Amount Tendered</label>
                                                                   <div class="input-group">
-                                                                        <span class="input-group-text">$</span>
-                                                                        <input type="number" 
-                                                                               class="form-control" 
-                                                                               id="guest_amount_tendered" 
-                                                                               name="amount_tendered" 
-                                                                               step="0.01" 
-                                                                               min="0" 
-                                                                               placeholder="0.00"
-                                                                               onchange="calculateGuestChange()"
-                                                                               onkeyup="calculateGuestChange()">
+                                                                        <span class="input-group-text" id="tendered-currency-symbol">$</span>
+                                                                        <input type="number"
+                                                                              class="form-control"
+                                                                              id="guest_amount_tendered"
+                                                                              name="amount_tendered"
+                                                                              step="0.01"
+                                                                              min="0"
+                                                                              placeholder="0.00"
+                                                                              onchange="calculateGuestChange()"
+                                                                              onkeyup="calculateGuestChange()">
                                                                   </div>
                                                             </div>
                                                             <div class="mb-3">
                                                                   <label for="guest_change_amount" class="form-label">Change</label>
                                                                   <div class="input-group">
-                                                                        <span class="input-group-text">$</span>
-                                                                        <input type="text" 
-                                                                               class="form-control" 
-                                                                               id="guest_change_amount" 
-                                                                               name="change_amount" 
-                                                                               readonly 
-                                                                               style="background-color: #f8f9fa; font-weight: bold;">
+                                                                        <span class="input-group-text" id="change-currency-symbol">$</span>
+                                                                        <input type="text"
+                                                                              class="form-control"
+                                                                              id="guest_change_amount"
+                                                                              name="change_amount"
+                                                                              readonly
+                                                                              style="background-color: #f8f9fa; font-weight: bold;">
                                                                   </div>
                                                             </div>
                                                             <div class="alert alert-warning" id="guest-insufficient-amount" style="display: none;">
@@ -940,16 +1008,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                                                   <small>Amount tendered is less than total amount!</small>
                                                             </div>
                                                       </div>
-                                                      
+
                                                       <!-- Quick Amount Buttons for Cash -->
                                                       <div id="guest-quick-amounts" style="display: none;" class="mb-3">
                                                             <label class="form-label">Quick Amounts</label>
                                                             <div class="d-flex flex-wrap gap-2">
-                                                                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setGuestQuickAmount(5)">$5</button>
-                                                                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setGuestQuickAmount(10)">$10</button>
-                                                                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setGuestQuickAmount(20)">$20</button>
-                                                                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setGuestQuickAmount(50)">$50</button>
-                                                                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setGuestQuickAmount(100)">$100</button>
+                                                                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setGuestQuickAmount(5)"><span id="quick-5">$5</span></button>
+                                                                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setGuestQuickAmount(10)"><span id="quick-10">$10</span></button>
+                                                                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setGuestQuickAmount(20)"><span id="quick-20">$20</span></button>
+                                                                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setGuestQuickAmount(50)"><span id="quick-50">$50</span></button>
+                                                                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setGuestQuickAmount(100)"><span id="quick-100">$100</span></button>
                                                             </div>
                                                       </div>
                                                 </div>
@@ -1302,16 +1370,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   checkoutBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
 
                   try {
-                        document.getElementById('modal-total').textContent = total.replace('$', '');
-                        
+                        const usdAmount = parseFloat(total.replace('$', ''));
+                        const modalTotalElement = document.getElementById('modal-total');
+
+                        if (!modalTotalElement) {
+                              throw new Error('modal-total element not found');
+                        }
+
+                        modalTotalElement.textContent = usdAmount.toFixed(2);
+
+                        // Initialize currency display
+                        updateCurrencyDisplay();
+
                         // Reset cash fields when opening modal
                         document.getElementById('guest_amount_tendered').value = '';
                         document.getElementById('guest_change_amount').value = '';
                         document.getElementById('guest-insufficient-amount').style.display = 'none';
-                        
+
                         // Show/hide cash fields based on payment method
                         toggleGuestCashFields();
-                        
+
                         const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
                         paymentModal.show();
                         console.log('Payment modal opened successfully'); // Debug log
@@ -1380,30 +1458,130 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   calculateGuestChange();
             }
 
+            function updateCurrencyDisplay() {
+                  const currencyCode = document.getElementById('currency_code').value;
+                  const modalTotalElement = document.getElementById('modal-total');
+
+                  if (!modalTotalElement) {
+                        console.error('modal-total element not found');
+                        return;
+                  }
+
+                  const usdAmount = parseFloat(modalTotalElement.textContent);
+
+                  if (!currencyCode || isNaN(usdAmount)) {
+                        return;
+                  }
+
+                  // Convert amount to selected currency
+                  fetch('index.php', {
+                              method: 'POST',
+                              headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded'
+                              },
+                              body: `action=convert_currency&amount=${usdAmount}&from_currency=USD&to_currency=${currencyCode}`
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                              if (data.success) {
+                                    // Update total display
+                                    document.getElementById('modal-total-display').textContent = data.formatted_amount;
+
+                                    // Update exchange rate info
+                                    if (currencyCode !== 'USD') {
+                                          document.getElementById('exchange-rate-info').style.display = 'block';
+                                          document.getElementById('current-rate').textContent = data.rate.toFixed(6);
+                                    } else {
+                                          document.getElementById('exchange-rate-info').style.display = 'none';
+                                    }
+
+                                    // Update currency symbols
+                                    const symbol = data.formatted_amount.replace(/[\d.,]/g, '').trim();
+                                    document.getElementById('tendered-currency-symbol').textContent = symbol;
+                                    document.getElementById('change-currency-symbol').textContent = symbol;
+
+                                    // Update quick amount buttons
+                                    updateQuickAmountButtons(currencyCode);
+                              }
+                        })
+                        .catch(error => {
+                              console.error('Error converting currency:', error);
+                        });
+            }
+
+            function updateQuickAmountButtons(currencyCode) {
+                  const amounts = [5, 10, 20, 50, 100];
+
+                  amounts.forEach(amount => {
+                        fetch('index.php', {
+                                    method: 'POST',
+                                    headers: {
+                                          'Content-Type': 'application/x-www-form-urlencoded'
+                                    },
+                                    body: `action=convert_currency&amount=${amount}&from_currency=USD&to_currency=${currencyCode}`
+                              })
+                              .then(response => response.json())
+                              .then(data => {
+                                    if (data.success) {
+                                          document.getElementById(`quick-${amount}`).textContent = data.formatted_amount;
+                                    }
+                              })
+                              .catch(error => {
+                                    console.error('Error updating quick amount:', error);
+                              });
+                  });
+            }
+
             function calculateGuestChange() {
-                  const totalAmount = parseFloat(document.getElementById('modal-total').textContent);
+                  const currencyCode = document.getElementById('currency_code').value;
+                  const modalTotalElement = document.getElementById('modal-total');
+
+                  if (!modalTotalElement) {
+                        console.error('modal-total element not found');
+                        return;
+                  }
+
+                  const usdAmount = parseFloat(modalTotalElement.textContent);
                   const amountTendered = parseFloat(document.getElementById('guest_amount_tendered').value) || 0;
                   const changeAmount = document.getElementById('guest_change_amount');
                   const insufficientAmount = document.getElementById('guest-insufficient-amount');
                   const completeBtn = document.getElementById('guest-complete-payment-btn');
 
-                  if (isNaN(totalAmount) || isNaN(amountTendered)) {
+                  if (isNaN(usdAmount) || isNaN(amountTendered) || !currencyCode) {
                         changeAmount.value = '';
                         insufficientAmount.style.display = 'none';
                         completeBtn.disabled = false;
                         return;
                   }
 
-                  const change = amountTendered - totalAmount;
-                  changeAmount.value = change >= 0 ? change.toFixed(2) : '';
+                  // Convert USD amount to selected currency for comparison
+                  fetch('index.php', {
+                              method: 'POST',
+                              headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded'
+                              },
+                              body: `action=convert_currency&amount=${usdAmount}&from_currency=USD&to_currency=${currencyCode}`
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                              if (data.success) {
+                                    const convertedTotal = data.converted_amount;
+                                    const change = amountTendered - convertedTotal;
 
-                  if (change < 0) {
-                        insufficientAmount.style.display = 'block';
-                        completeBtn.disabled = true;
-                  } else {
-                        insufficientAmount.style.display = 'none';
-                        completeBtn.disabled = false;
-                  }
+                                    changeAmount.value = change >= 0 ? change.toFixed(2) : '';
+
+                                    if (change < 0) {
+                                          insufficientAmount.style.display = 'block';
+                                          completeBtn.disabled = true;
+                                    } else {
+                                          insufficientAmount.style.display = 'none';
+                                          completeBtn.disabled = false;
+                                    }
+                              }
+                        })
+                        .catch(error => {
+                              console.error('Error calculating change:', error);
+                        });
             }
 
             function showNotification(message, type) {

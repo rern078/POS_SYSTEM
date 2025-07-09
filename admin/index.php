@@ -2,6 +2,7 @@
 session_start();
 require_once '../config/database.php';
 require_once '../includes/auth.php';
+require_once '../includes/exchange_rate.php';
 
 // Check if user is logged in and has admin privileges
 if (!isLoggedIn() || !isAdmin()) {
@@ -101,7 +102,12 @@ $stats = getDashboardStats();
                                                       <i class="fas fa-dollar-sign"></i>
                                                 </div>
                                           </div>
-                                          <h2 class="stat-card-value">$<?php echo number_format($stats['today_sales'], 2); ?></h2>
+                                          <h2 class="stat-card-value"><?php
+                                                                        $exchangeRate = new ExchangeRate();
+                                                                        $defaultCurrency = $exchangeRate->getDefaultCurrency();
+                                                                        $symbol = $defaultCurrency['symbol'] ?? '$';
+                                                                        echo $symbol . number_format($stats['today_sales'], 2);
+                                                                        ?></h2>
                                           <div class="stat-card-change positive">
                                                 <i class="fas fa-arrow-up"></i> +12.5% from yesterday
                                           </div>
@@ -249,7 +255,9 @@ $stats = getDashboardStats();
                                                                                     <span class="badge bg-light text-dark"><?php echo $order['product_count']; ?> items</span>
                                                                               </td>
                                                                               <td>
-                                                                                    <span class="fw-bold text-success">$<?php echo number_format($order['total_amount'], 2); ?></span>
+                                                                                    <span class="fw-bold text-success"><?php
+                                                                                                                        echo $symbol . number_format($order['total_amount'], 2);
+                                                                                                                        ?></span>
                                                                               </td>
                                                                               <td>
                                                                                     <span class="badge bg-<?php echo $order['status'] == 'completed' ? 'success' : 'warning'; ?>">

@@ -2,6 +2,7 @@
 session_start();
 require_once '../config/database.php';
 require_once '../includes/auth.php';
+require_once '../includes/exchange_rate.php';
 
 // Check if user is logged in and is manager
 if (!isLoggedIn() || !isManager()) {
@@ -116,7 +117,12 @@ $top_products = getTopProducts(5);
                                     <div class="d-flex justify-content-between">
                                           <div>
                                                 <h4 class="card-title">Today's Sales</h4>
-                                                <h2 class="mb-0">$<?php echo number_format($stats['today_sales'], 2); ?></h2>
+                                                <h2 class="mb-0"><?php 
+                                                      $exchangeRate = new ExchangeRate();
+                                                      $defaultCurrency = $exchangeRate->getDefaultCurrency();
+                                                      $symbol = $defaultCurrency['symbol'] ?? '$';
+                                                      echo $symbol . number_format($stats['today_sales'], 2); 
+                                                ?></h2>
                                           </div>
                                           <div class="align-self-center">
                                                 <i class="fas fa-dollar-sign fa-2x"></i>
@@ -203,7 +209,7 @@ $top_products = getTopProducts(5);
                                                             <strong><?php echo htmlspecialchars($product['name']); ?></strong>
                                                             <br><small class="text-muted"><?php echo $product['total_sold']; ?> sold</small>
                                                       </div>
-                                                      <span class="badge bg-primary">$<?php echo number_format($product['total_revenue'], 2); ?></span>
+                                                      <span class="badge bg-primary"><?php echo $symbol . number_format($product['total_revenue'], 2); ?></span>
                                                 </div>
                                           <?php endforeach; ?>
                                     <?php endif; ?>
@@ -241,7 +247,7 @@ $top_products = getTopProducts(5);
                                                                         <td><strong>#<?php echo $order['id']; ?></strong></td>
                                                                         <td><?php echo htmlspecialchars($order['customer_name'] ?: 'Walk-in Customer'); ?></td>
                                                                         <td><span class="badge bg-info"><?php echo $order['product_count']; ?> items</span></td>
-                                                                        <td><strong>$<?php echo number_format($order['total_amount'], 2); ?></strong></td>
+                                                                        <td><strong><?php echo $symbol . number_format($order['total_amount'], 2); ?></strong></td>
                                                                         <td>
                                                                               <span class="badge bg-<?php echo $order['status'] === 'completed' ? 'success' : ($order['status'] === 'pending' ? 'warning' : 'danger'); ?>">
                                                                                     <?php echo ucfirst($order['status']); ?>

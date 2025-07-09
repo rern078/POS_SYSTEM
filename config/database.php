@@ -76,6 +76,95 @@ function initializeDatabase()
         FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
     )");
 
+      // Create exchange_rates table
+      $pdo->exec("CREATE TABLE IF NOT EXISTS exchange_rates (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        base_currency VARCHAR(3) NOT NULL DEFAULT 'USD',
+        target_currency VARCHAR(3) NOT NULL,
+        rate DECIMAL(10,6) NOT NULL,
+        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        is_active BOOLEAN DEFAULT TRUE,
+        UNIQUE KEY unique_currency_pair (base_currency, target_currency)
+    )");
+
+      // Create currencies table
+      $pdo->exec("CREATE TABLE IF NOT EXISTS currencies (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        code VARCHAR(3) NOT NULL UNIQUE,
+        name VARCHAR(50) NOT NULL,
+        symbol VARCHAR(5) NOT NULL,
+        is_default BOOLEAN DEFAULT FALSE,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+
+      // Add currency fields to orders table if they don't exist
+      try {
+            $pdo->exec("ALTER TABLE orders ADD COLUMN currency_code VARCHAR(3) DEFAULT 'USD' AFTER total_amount");
+      } catch (PDOException $e) {
+            // Column might already exist
+      }
+
+      try {
+            $pdo->exec("ALTER TABLE orders ADD COLUMN exchange_rate DECIMAL(10,6) DEFAULT 1.000000 AFTER currency_code");
+      } catch (PDOException $e) {
+            // Column might already exist
+      }
+
+      // Insert default currencies
+      $defaultCurrencies = [
+            ['USD', 'US Dollar', '$', 1],
+            ['EUR', 'Euro', '€', 0],
+            ['GBP', 'British Pound', '£', 0],
+            ['JPY', 'Japanese Yen', '¥', 0],
+            ['CAD', 'Canadian Dollar', 'C$', 0],
+            ['AUD', 'Australian Dollar', 'A$', 0],
+            ['CHF', 'Swiss Franc', 'CHF', 0],
+            ['CNY', 'Chinese Yuan', '¥', 0],
+            ['INR', 'Indian Rupee', '₹', 0],
+            ['KRW', 'South Korean Won', '₩', 0],
+            ['SGD', 'Singapore Dollar', 'S$', 0],
+            ['HKD', 'Hong Kong Dollar', 'HK$', 0],
+            ['THB', 'Thai Baht', '฿', 0],
+            ['PHP', 'Philippine Peso', '₱', 0],
+            ['MYR', 'Malaysian Ringgit', 'RM', 0],
+            ['IDR', 'Indonesian Rupiah', 'Rp', 0],
+            ['VND', 'Vietnamese Dong', '₫', 0],
+            ['KHR', 'Cambodian Riel', '៛', 0]
+      ];
+
+      $stmt = $pdo->prepare("INSERT IGNORE INTO currencies (code, name, symbol, is_default) VALUES (?, ?, ?, ?)");
+      foreach ($defaultCurrencies as $currency) {
+            $stmt->execute($currency);
+      }
+
+      // Insert default exchange rates
+      $defaultRates = [
+            ['USD', 'USD', 1.000000],
+            ['USD', 'EUR', 0.850000],
+            ['USD', 'GBP', 0.730000],
+            ['USD', 'JPY', 110.000000],
+            ['USD', 'CAD', 1.250000],
+            ['USD', 'AUD', 1.350000],
+            ['USD', 'CHF', 0.920000],
+            ['USD', 'CNY', 6.450000],
+            ['USD', 'INR', 74.500000],
+            ['USD', 'KRW', 1150.000000],
+            ['USD', 'SGD', 1.350000],
+            ['USD', 'HKD', 7.780000],
+            ['USD', 'THB', 33.500000],
+            ['USD', 'PHP', 50.800000],
+            ['USD', 'MYR', 4.150000],
+            ['USD', 'IDR', 14250.000000],
+            ['USD', 'VND', 23000.000000],
+            ['USD', 'KHR', 4100.000000]
+      ];
+
+      $stmt = $pdo->prepare("INSERT IGNORE INTO exchange_rates (base_currency, target_currency, rate) VALUES (?, ?, ?)");
+      foreach ($defaultRates as $rate) {
+            $stmt->execute($rate);
+      }
+
       // Insert default admin user if not exists
       $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username = 'admin'");
       $stmt->execute();

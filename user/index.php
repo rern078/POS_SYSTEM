@@ -2,6 +2,7 @@
 session_start();
 require_once '../config/database.php';
 require_once '../includes/auth.php';
+require_once '../includes/exchange_rate.php';
 
 // Check if user is logged in
 if (!isLoggedIn()) {
@@ -148,7 +149,12 @@ $stats['today_sales'] = $stmt->fetchColumn();
                                                       Today's Sales
                                                 </div>
                                                 <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                                      $<?php echo number_format($stats['today_sales'], 2); ?>
+                                                      <?php 
+                                                            $exchangeRate = new ExchangeRate();
+                                                            $defaultCurrency = $exchangeRate->getDefaultCurrency();
+                                                            $symbol = $defaultCurrency['symbol'] ?? '$';
+                                                            echo $symbol . number_format($stats['today_sales'], 2); 
+                                                      ?>
                                                 </div>
                                           </div>
                                           <div class="col-auto">

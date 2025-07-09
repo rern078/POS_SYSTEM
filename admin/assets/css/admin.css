@@ -1214,3 +1214,235 @@ body {
             padding: 3px;
       }
 }
+
+/* Exchange Rate Management Styles */
+.rate-card {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: 1.5rem;
+      box-shadow: var(--box-shadow);
+      border: 1px solid #e3e6f0;
+      transition: var(--transition);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+}
+
+.rate-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0.5rem 2rem 0 rgba(58, 59, 69, 0.2);
+}
+
+.rate-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+}
+
+.rate-currency-info h6 {
+      font-weight: 600;
+      color: var(--dark-color);
+      margin: 0;
+      font-size: 1.1rem;
+}
+
+.rate-currency-info small {
+      color: var(--secondary-color);
+      font-size: 0.85rem;
+}
+
+.rate-currency-symbol {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--primary-color);
+      background: linear-gradient(145deg, #f8f9fc, #e9ecef);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.rate-value {
+      flex-grow: 1;
+      display: flex;
+      align-items: center;
+      margin-bottom: 1rem;
+}
+
+.rate-number {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--dark-color);
+      font-family: 'Courier New', monospace;
+}
+
+.rate-actions {
+      margin-top: auto;
+}
+
+.rate-actions .btn {
+      width: 100%;
+      font-size: 0.85rem;
+      padding: 0.5rem 1rem;
+}
+
+/* Exchange Rate History Chart */
+.rate-history-controls {
+      background: #f8f9fc;
+      border-radius: var(--border-radius);
+      padding: 1rem;
+      margin-bottom: 1rem;
+}
+
+.rate-history-controls .form-label {
+      font-weight: 600;
+      color: var(--dark-color);
+      margin-bottom: 0.5rem;
+}
+
+/* Exchange Rate Alerts */
+.rate-alert {
+      background: linear-gradient(145deg, #fff5f5, #fed7d7);
+      border: 1px solid #feb2b2;
+      border-radius: var(--border-radius);
+      padding: 1rem;
+      margin-bottom: 1rem;
+      position: relative;
+}
+
+.rate-alert.warning {
+      background: linear-gradient(145deg, #fffbeb, #fef3c7);
+      border-color: #fbbf24;
+}
+
+.rate-alert.info {
+      background: linear-gradient(145deg, #eff6ff, #dbeafe);
+      border-color: #60a5fa;
+}
+
+.rate-alert.success {
+      background: linear-gradient(145deg, #f0fdf4, #dcfce7);
+      border-color: #4ade80;
+}
+
+.rate-alert-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+}
+
+.rate-alert-title {
+      font-weight: 600;
+      color: var(--dark-color);
+      margin: 0;
+}
+
+.rate-alert-time {
+      font-size: 0.85rem;
+      color: var(--secondary-color);
+}
+
+.rate-alert-message {
+      color: var(--dark-color);
+      margin: 0;
+      font-size: 0.9rem;
+}
+
+/* Exchange Rate Settings */
+.rate-settings-card {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: 1.5rem;
+      box-shadow: var(--box-shadow);
+      border: 1px solid #e3e6f0;
+      margin-bottom: 1.5rem;
+}
+
+.rate-settings-title {
+      font-weight: 600;
+      color: var(--dark-color);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+}
+
+.rate-settings-title i {
+      margin-right: 0.5rem;
+      color: var(--primary-color);
+}
+
+.setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid #f1f3f4;
+}
+
+.setting-item:last-child {
+      border-bottom: none;
+}
+
+.setting-label {
+      font-weight: 500;
+      color: var(--dark-color);
+}
+
+.setting-value {
+      color: var(--secondary-color);
+      font-size: 0.9rem;
+}
+
+/* API Status Indicators */
+.api-status {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      border-radius: 1rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+}
+
+.api-status.online {
+      background: #dcfce7;
+      color: #166534;
+}
+
+.api-status.offline {
+      background: #fef2f2;
+      color: #dc2626;
+}
+
+.api-status.warning {
+      background: #fef3c7;
+      color: #d97706;
+}
+
+/* Responsive adjustments for exchange rates */
+@media (max-width: 768px) {
+      .rate-card {
+            margin-bottom: 1rem;
+      }
+      
+      .rate-card-header {
+            flex-direction: column;
+            align-items: flex-start;
+      }
+      
+      .rate-currency-symbol {
+            margin-top: 0.5rem;
+      }
+      
+      .rate-number {
+            font-size: 1.25rem;
+      }
+      
+      .rate-history-controls .row > div {
+            margin-bottom: 1rem;
+      }
+}

@@ -1,6 +1,9 @@
 <?php
 session_start();
 require_once 'config/database.php';
+require_once 'includes/exchange_rate.php';
+
+$exchangeRate = new ExchangeRate();
 
 $pdo = getDBConnection();
 
@@ -82,15 +85,15 @@ if ($is_ajax) {
                                                 <br><small class="text-muted"><?php echo htmlspecialchars($item['product_code']); ?></small>
                                           </td>
                                           <td class="text-center"><?php echo $item['quantity']; ?></td>
-                                          <td class="text-end">$<?php echo number_format($item['price'], 2); ?></td>
-                                          <td class="text-end">$<?php echo number_format($item['price'] * $item['quantity'], 2); ?></td>
+                                          <td class="text-end"><?php echo $exchangeRate->formatAmount($item['price'], $order['currency_code'] ?? 'USD'); ?></td>
+                                          <td class="text-end"><?php echo $exchangeRate->formatAmount($item['price'] * $item['quantity'], $order['currency_code'] ?? 'USD'); ?></td>
                                     </tr>
                               <?php endforeach; ?>
                         </tbody>
                         <tfoot>
                               <tr class="table-active">
                                     <th colspan="3">TOTAL</th>
-                                    <th class="text-end">$<?php echo number_format($order['total_amount'], 2); ?></th>
+                                    <th class="text-end"><?php echo $exchangeRate->formatAmount($order['total_amount'], $order['currency_code'] ?? 'USD'); ?></th>
                               </tr>
                         </tfoot>
                   </table>
@@ -106,13 +109,43 @@ if ($is_ajax) {
                               <?php echo ucfirst($order['payment_method']); ?>
                         </div>
                   </div>
+                  <?php if ($order['currency_code'] && $order['currency_code'] !== 'USD'): ?>
+                        <div class="row">
+                              <div class="col-6">
+                                    <strong>Currency:</strong>
+                              </div>
+                              <div class="col-6 text-end">
+                                    <?php echo $order['currency_code']; ?> (<?php echo $exchangeRate->getCurrencySymbol($order['currency_code']); ?>)
+                              </div>
+                        </div>
+                        <?php if ($order['exchange_rate'] && $order['exchange_rate'] != 1): ?>
+                              <div class="row">
+                                    <div class="col-6">
+                                          <strong>Exchange Rate:</strong>
+                                    </div>
+                                    <div class="col-6 text-end">
+                                          1 USD = <?php echo number_format($order['exchange_rate'], 6); ?> <?php echo $order['currency_code']; ?>
+                                    </div>
+                              </div>
+                              <?php if ($order['original_amount']): ?>
+                                    <div class="row">
+                                          <div class="col-6">
+                                                <strong>Original Amount (USD):</strong>
+                                          </div>
+                                          <div class="col-6 text-end">
+                                                $<?php echo number_format($order['original_amount'], 2); ?>
+                                          </div>
+                                    </div>
+                              <?php endif; ?>
+                        <?php endif; ?>
+                  <?php endif; ?>
                   <?php if ($order['payment_method'] === 'cash' && $order['amount_tendered'] > 0): ?>
                         <div class="row">
                               <div class="col-6">
                                     <strong>Amount Tendered:</strong>
                               </div>
                               <div class="col-6 text-end">
-                                    $<?php echo number_format($order['amount_tendered'], 2); ?>
+                                    <?php echo $exchangeRate->formatAmount($order['amount_tendered'], $order['currency_code'] ?? 'USD'); ?>
                               </div>
                         </div>
                         <?php if ($order['change_amount'] > 0): ?>
@@ -121,7 +154,7 @@ if ($is_ajax) {
                                           <strong>Change:</strong>
                                     </div>
                                     <div class="col-6 text-end">
-                                          $<?php echo number_format($order['change_amount'], 2); ?>
+                                          <?php echo $exchangeRate->formatAmount($order['change_amount'], $order['currency_code'] ?? 'USD'); ?>
                                     </div>
                               </div>
                         <?php endif; ?>
@@ -213,15 +246,15 @@ if ($is_ajax) {
                                                       <br><small class="text-muted"><?php echo htmlspecialchars($item['product_code']); ?></small>
                                                 </td>
                                                 <td class="text-center"><?php echo $item['quantity']; ?></td>
-                                                <td class="text-end">$<?php echo number_format($item['price'], 2); ?></td>
-                                                <td class="text-end">$<?php echo number_format($item['price'] * $item['quantity'], 2); ?></td>
+                                                <td class="text-end"><?php echo $exchangeRate->formatAmount($item['price'], $order['currency_code'] ?? 'USD'); ?></td>
+                                                <td class="text-end"><?php echo $exchangeRate->formatAmount($item['price'] * $item['quantity'], $order['currency_code'] ?? 'USD'); ?></td>
                                           </tr>
                                     <?php endforeach; ?>
                               </tbody>
                               <tfoot>
                                     <tr class="table-active total-row">
                                           <th colspan="3">TOTAL</th>
-                                          <th class="text-end">$<?php echo number_format($order['total_amount'], 2); ?></th>
+                                          <th class="text-end"><?php echo $exchangeRate->formatAmount($order['total_amount'], $order['currency_code'] ?? 'USD'); ?></th>
                                     </tr>
                               </tfoot>
                         </table>
@@ -237,13 +270,43 @@ if ($is_ajax) {
                                     <?php echo ucfirst($order['payment_method']); ?>
                               </div>
                         </div>
+                        <?php if ($order['currency_code'] && $order['currency_code'] !== 'USD'): ?>
+                              <div class="row">
+                                    <div class="col-6">
+                                          <strong>Currency:</strong>
+                                    </div>
+                                    <div class="col-6 text-end">
+                                          <?php echo $order['currency_code']; ?> (<?php echo $exchangeRate->getCurrencySymbol($order['currency_code']); ?>)
+                                    </div>
+                              </div>
+                              <?php if ($order['exchange_rate'] && $order['exchange_rate'] != 1): ?>
+                                    <div class="row">
+                                          <div class="col-6">
+                                                <strong>Exchange Rate:</strong>
+                                          </div>
+                                          <div class="col-6 text-end">
+                                                1 USD = <?php echo number_format($order['exchange_rate'], 6); ?> <?php echo $order['currency_code']; ?>
+                                          </div>
+                                    </div>
+                                    <?php if ($order['original_amount']): ?>
+                                          <div class="row">
+                                                <div class="col-6">
+                                                      <strong>Original Amount (USD):</strong>
+                                                </div>
+                                                <div class="col-6 text-end">
+                                                      $<?php echo number_format($order['original_amount'], 2); ?>
+                                                </div>
+                                          </div>
+                                    <?php endif; ?>
+                              <?php endif; ?>
+                        <?php endif; ?>
                         <?php if ($order['payment_method'] === 'cash' && $order['amount_tendered'] > 0): ?>
                               <div class="row">
                                     <div class="col-6">
                                           <strong>Amount Tendered:</strong>
                                     </div>
                                     <div class="col-6 text-end">
-                                          $<?php echo number_format($order['amount_tendered'], 2); ?>
+                                          <?php echo $exchangeRate->formatAmount($order['amount_tendered'], $order['currency_code'] ?? 'USD'); ?>
                                     </div>
                               </div>
                               <?php if ($order['change_amount'] > 0): ?>
@@ -252,7 +315,7 @@ if ($is_ajax) {
                                                 <strong>Change:</strong>
                                           </div>
                                           <div class="col-6 text-end">
-                                                $<?php echo number_format($order['change_amount'], 2); ?>
+                                                <?php echo $exchangeRate->formatAmount($order['change_amount'], $order['currency_code'] ?? 'USD'); ?>
                                           </div>
                                     </div>
                               <?php endif; ?>
