@@ -24,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $role = $_POST['role'];
                         $full_name = trim($_POST['full_name']);
                         $phone = trim($_POST['phone'] ?? '');
+                        $status = $_POST['status'] ?? 'active';
 
                         if (empty($username) || empty($email) || empty($password)) {
                               $error = 'Please fill in all required fields.';
@@ -35,8 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     $error = 'Username or email already exists.';
                               } else {
                                     $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                                    $stmt = $pdo->prepare("INSERT INTO users (username, email, password, full_name, phone, role) VALUES (?, ?, ?, ?, ?, ?)");
-                                    if ($stmt->execute([$username, $email, $hashed_password, $full_name, $phone, $role])) {
+                                    $stmt = $pdo->prepare("INSERT INTO users (username, email, password, full_name, phone, role, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                                    if ($stmt->execute([$username, $email, $hashed_password, $full_name, $phone, $role, $status])) {
                                           $message = 'User added successfully!';
                                     } else {
                                           $error = 'Failed to add user.';
@@ -53,6 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $full_name = trim($_POST['full_name']);
                         $phone = trim($_POST['phone'] ?? '');
                         $password = $_POST['password'];
+                        $status = $_POST['status'] ?? 'active';
 
                         if (empty($username) || empty($email)) {
                               $error = 'Please fill in all required fields.';
@@ -65,11 +67,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                               } else {
                                     if (!empty($password)) {
                                           $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                                          $stmt = $pdo->prepare("UPDATE users SET username = ?, email = ?, password = ?, full_name = ?, phone = ?, role = ? WHERE id = ?");
-                                          $params = [$username, $email, $hashed_password, $full_name, $phone, $role, $id];
+                                          $stmt = $pdo->prepare("UPDATE users SET username = ?, email = ?, password = ?, full_name = ?, phone = ?, role = ?, status = ? WHERE id = ?");
+                                          $params = [$username, $email, $hashed_password, $full_name, $phone, $role, $status, $id];
                                     } else {
-                                          $stmt = $pdo->prepare("UPDATE users SET username = ?, email = ?, full_name = ?, phone = ?, role = ? WHERE id = ?");
-                                          $params = [$username, $email, $full_name, $phone, $role, $id];
+                                          $stmt = $pdo->prepare("UPDATE users SET username = ?, email = ?, full_name = ?, phone = ?, role = ?, status = ? WHERE id = ?");
+                                          $params = [$username, $email, $full_name, $phone, $role, $status, $id];
                                     }
 
                                     if ($stmt->execute($params)) {
@@ -95,6 +97,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                               }
                         }
                         break;
+
+                  case 'toggle_status':
+                        $id = intval($_POST['id']);
+                        $new_status = $_POST['status'];
+
+                        // Prevent deactivating own account
+                        if ($id == $_SESSION['user_id'] && $new_status === 'inactive') {
+                              $error = 'You cannot deactivate your own account.';
+                        } else {
+                              $stmt = $pdo->prepare("UPDATE users SET status = ? WHERE id = ?");
+                              if ($stmt->execute([$new_status, $id])) {
+                                    $message = 'User status updated successfully!';
+                              } else {
+                                    $error = 'Failed to update user status.';
+                              }
+                        }
+                        break;
             }
       }
 }
@@ -102,6 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Get users with search and filter
 $search = $_GET['search'] ?? '';
 $role_filter = $_GET['role'] ?? '';
+$status_filter = $_GET['status'] ?? '';
 $sort = $_GET['sort'] ?? 'id';
 $order = $_GET['order'] ?? 'ASC';
 
@@ -124,6 +144,11 @@ if (!empty($search)) {
 if (!empty($role_filter)) {
       $whereConditions[] = "role = ?";
       $params[] = $role_filter;
+}
+
+if (!empty($status_filter)) {
+      $whereConditions[] = "status = ?";
+      $params[] = $status_filter;
 }
 
 $whereClause = !empty($whereConditions) ? 'WHERE ' . implode(' AND ', $whereConditions) : '';
@@ -271,6 +296,14 @@ $roles = ['admin', 'manager', 'cashier', 'customer'];
                                                       <?php endforeach; ?>
                                                 </select>
                                           </div>
+                                          <div class="col-md-3">
+                                                <label for="status" class="form-label">Status</label>
+                                                <select class="form-select" id="status" name="status">
+                                                      <option value="">All Status</option>
+                                                      <option value="active" <?php echo $status_filter === 'active' ? 'selected' : ''; ?>>Active</option>
+                                                      <option value="inactive" <?php echo $status_filter === 'inactive' ? 'selected' : ''; ?>>Inactive</option>
+                                                </select>
+                                          </div>
                                           <div class="col-md-2">
                                                 <label for="sort" class="form-label">Sort By</label>
                                                 <select class="form-select" id="sort" name="sort">
@@ -359,8 +392,9 @@ $roles = ['admin', 'manager', 'cashier', 'customer'];
                                                                         </span>
                                                                   </td>
                                                                   <td>
-                                                                        <span class="badge bg-success">
-                                                                              <i class="fas fa-check-circle me-1"></i>Active
+                                                                        <span class="badge bg-<?php echo $user['status'] === 'active' ? 'success' : 'danger'; ?>">
+                                                                              <i class="fas fa-<?php echo $user['status'] === 'active' ? 'check-circle' : 'times-circle'; ?> me-1"></i>
+                                                                              <?php echo ucfirst(htmlspecialchars($user['status'] ?? 'active')); ?>
                                                                         </span>
                                                                   </td>
                                                                   <td>
@@ -372,6 +406,9 @@ $roles = ['admin', 'manager', 'cashier', 'customer'];
                                                                                     <i class="fas fa-edit"></i>
                                                                               </button>
                                                                               <?php if ($user['id'] != $_SESSION['user_id']): ?>
+                                                                                    <button class="btn btn-sm btn-<?php echo ($user['status'] ?? 'active') === 'active' ? 'warning' : 'success'; ?>" onclick="toggleUserStatus(<?php echo $user['id']; ?>, '<?php echo htmlspecialchars($user['username']); ?>', '<?php echo $user['status'] ?? 'active'; ?>')">
+                                                                                          <i class="fas fa-<?php echo ($user['status'] ?? 'active') === 'active' ? 'ban' : 'check'; ?>"></i>
+                                                                                    </button>
                                                                                     <button class="btn btn-sm btn-danger" onclick="deleteUser(<?php echo $user['id']; ?>, '<?php echo htmlspecialchars($user['username']); ?>')">
                                                                                           <i class="fas fa-trash"></i>
                                                                                     </button>
@@ -390,7 +427,7 @@ $roles = ['admin', 'manager', 'cashier', 'customer'];
                                                 <ul class="pagination justify-content-center">
                                                       <?php if ($current_page > 1): ?>
                                                             <li class="page-item">
-                                                                  <a class="page-link" href="?page=<?php echo $current_page - 1; ?>&search=<?php echo urlencode($search); ?>&role=<?php echo urlencode($role_filter); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
+                                                                  <a class="page-link" href="?page=<?php echo $current_page - 1; ?>&search=<?php echo urlencode($search); ?>&role=<?php echo urlencode($role_filter); ?>&status=<?php echo urlencode($status_filter); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
                                                                         Previous
                                                                   </a>
                                                             </li>
@@ -398,7 +435,7 @@ $roles = ['admin', 'manager', 'cashier', 'customer'];
 
                                                       <?php for ($i = max(1, $current_page - 2); $i <= min($total_pages, $current_page + 2); $i++): ?>
                                                             <li class="page-item <?php echo $i === $current_page ? 'active' : ''; ?>">
-                                                                  <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($search); ?>&role=<?php echo urlencode($role_filter); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
+                                                                  <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($search); ?>&role=<?php echo urlencode($role_filter); ?>&status=<?php echo urlencode($status_filter); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
                                                                         <?php echo $i; ?>
                                                                   </a>
                                                             </li>
@@ -406,7 +443,7 @@ $roles = ['admin', 'manager', 'cashier', 'customer'];
 
                                                       <?php if ($current_page < $total_pages): ?>
                                                             <li class="page-item">
-                                                                  <a class="page-link" href="?page=<?php echo $current_page + 1; ?>&search=<?php echo urlencode($search); ?>&role=<?php echo urlencode($role_filter); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
+                                                                  <a class="page-link" href="?page=<?php echo $current_page + 1; ?>&search=<?php echo urlencode($search); ?>&role=<?php echo urlencode($role_filter); ?>&status=<?php echo urlencode($status_filter); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
                                                                         Next
                                                                   </a>
                                                             </li>
@@ -476,6 +513,15 @@ $roles = ['admin', 'manager', 'cashier', 'customer'];
                                                             <?php foreach ($roles as $role): ?>
                                                                   <option value="<?php echo htmlspecialchars($role); ?>"><?php echo ucfirst(htmlspecialchars($role)); ?></option>
                                                             <?php endforeach; ?>
+                                                      </select>
+                                                </div>
+                                          </div>
+                                          <div class="col-md-6">
+                                                <div class="mb-3">
+                                                      <label for="status" class="form-label">Status *</label>
+                                                      <select class="form-select" id="status" name="status" required>
+                                                            <option value="active">Active</option>
+                                                            <option value="inactive">Inactive</option>
                                                       </select>
                                                 </div>
                                           </div>
@@ -551,6 +597,15 @@ $roles = ['admin', 'manager', 'cashier', 'customer'];
                                                       </select>
                                                 </div>
                                           </div>
+                                          <div class="col-md-6">
+                                                <div class="mb-3">
+                                                      <label for="edit_status" class="form-label">Status *</label>
+                                                      <select class="form-select" id="edit_status" name="status" required>
+                                                            <option value="active">Active</option>
+                                                            <option value="inactive">Inactive</option>
+                                                      </select>
+                                                </div>
+                                          </div>
                                     </div>
 
                                     <div class="mb-3">
@@ -576,6 +631,7 @@ $roles = ['admin', 'manager', 'cashier', 'customer'];
                   document.getElementById('edit_full_name').value = user.full_name || '';
                   document.getElementById('edit_phone').value = user.phone || '';
                   document.getElementById('edit_role').value = user.role;
+                  document.getElementById('edit_status').value = user.status || 'active';
                   document.getElementById('edit_password').value = '';
 
                   const editModal = new bootstrap.Modal(document.getElementById('editUserModal'));
@@ -589,6 +645,23 @@ $roles = ['admin', 'manager', 'cashier', 'customer'];
                         form.innerHTML = `
                               <input type="hidden" name="action" value="delete">
                               <input type="hidden" name="id" value="${id}">
+                        `;
+                        document.body.appendChild(form);
+                        form.submit();
+                  }
+            }
+
+            function toggleUserStatus(id, username, currentStatus) {
+                  const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+                  const action = currentStatus === 'active' ? 'deactivate' : 'activate';
+
+                  if (confirm(`Are you sure you want to ${action} user "${username}"?`)) {
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.innerHTML = `
+                              <input type="hidden" name="action" value="toggle_status">
+                              <input type="hidden" name="id" value="${id}">
+                              <input type="hidden" name="status" value="${newStatus}">
                         `;
                         document.body.appendChild(form);
                         form.submit();

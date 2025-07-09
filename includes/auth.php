@@ -41,6 +41,11 @@ function login($username, $password)
       $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
       if ($user && password_verify($password, $user['password'])) {
+            // Check if user is active
+            if ($user['status'] !== 'active') {
+                  return false; // User is inactive
+            }
+            
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['email'] = $user['email'];

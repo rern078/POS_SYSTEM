@@ -33,24 +33,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
                   if ($user && password_verify($password, $user['password'])) {
-                        // Set session variables
-                        $_SESSION['user_id'] = $user['id'];
-                        $_SESSION['username'] = $user['username'];
-                        $_SESSION['email'] = $user['email'];
-                        $_SESSION['role'] = $user['role'];
-
-                        // Redirect based on role and redirect parameter
-                        $redirect = $_GET['redirect'] ?? '';
-                        if ($redirect === 'checkout') {
-                              header('Location: index.php?restore_cart=1');
-                        } elseif ($user['role'] === 'admin') {
-                              header('Location: admin/index.php');
-                        } elseif ($user['role'] === 'customer') {
-                              header('Location: index.php?logged_in=1');
+                        // Check if user is active
+                        if ($user['status'] !== 'active') {
+                              $error = 'Your account has been deactivated. Please contact an administrator.';
                         } else {
-                              header('Location: user/index.php');
+                              // Set session variables
+                              $_SESSION['user_id'] = $user['id'];
+                              $_SESSION['username'] = $user['username'];
+                              $_SESSION['email'] = $user['email'];
+                              $_SESSION['role'] = $user['role'];
+
+                              // Redirect based on role and redirect parameter
+                              $redirect = $_GET['redirect'] ?? '';
+                              if ($redirect === 'checkout') {
+                                    header('Location: index.php?restore_cart=1');
+                              } elseif ($user['role'] === 'admin') {
+                                    header('Location: admin/index.php');
+                              } elseif ($user['role'] === 'customer') {
+                                    header('Location: index.php?logged_in=1');
+                              } else {
+                                    header('Location: user/index.php');
+                              }
+                              exit();
                         }
-                        exit();
                   } else {
                         $error = 'Invalid username/email or password.';
                   }
