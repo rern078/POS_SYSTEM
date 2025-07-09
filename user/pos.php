@@ -2,6 +2,7 @@
 session_start();
 require_once '../config/database.php';
 require_once '../includes/auth.php';
+require_once '../includes/exchange_rate.php';
 
 // Check if user is logged in
 if (!isLoggedIn()) {
@@ -10,6 +11,9 @@ if (!isLoggedIn()) {
 }
 
 $pdo = getDBConnection();
+$exchangeRate = new ExchangeRate();
+$currencies = $exchangeRate->getCurrencies();
+$defaultCurrency = $exchangeRate->getDefaultCurrency();
 $message = '';
 $error = '';
 
@@ -109,6 +113,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   echo json_encode(['success' => true, 'total' => $total]);
                   exit;
 
+            case 'convert_currency':
+                  $amount = (float)($_POST['amount'] ?? 0);
+                  $fromCurrency = $_POST['from_currency'] ?? 'USD';
+                  $toCurrency = $_POST['to_currency'] ?? 'USD';
+
+                  if ($amount <= 0) {
+                        echo json_encode(['success' => false, 'message' => 'Invalid amount']);
+                        exit;
+                  }
+
+                  $convertedAmount = $exchangeRate->convertCurrency($amount, $fromCurrency, $toCurrency);
+                  $rate = $exchangeRate->getExchangeRate($fromCurrency, $toCurrency);
+                  $formattedAmount = $exchangeRate->formatAmount($convertedAmount, $toCurrency);
+
+                  echo json_encode([
+                        'success' => true,
+                        'converted_amount' => $convertedAmount,
+                        'formatted_amount' => $formattedAmount,
+                        'rate' => $rate,
+                        'from_currency' => $fromCurrency,
+                        'to_currency' => $toCurrency
+                  ]);
+                  exit;
+
+            case 'get_currencies':
+                  echo json_encode([
+                        'success' => true,
+                        'currencies' => $currencies,
+                        'default_currency' => $defaultCurrency
+                  ]);
+                  exit;
+
             case 'process_payment':
                   if (empty($_SESSION['cart'])) {
                         echo json_encode(['success' => false, 'message' => 'Cart is empty']);
@@ -118,13 +154,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   $customer_name = trim($_POST['customer_name']);
                   $customer_email = trim($_POST['customer_email']);
                   $payment_method = $_POST['payment_method'];
+                  $currency_code = $_POST['currency_code'] ?? 'USD';
                   $amount_tendered = isset($_POST['amount_tendered']) ? (float)$_POST['amount_tendered'] : 0;
                   $change_amount = isset($_POST['change_amount']) ? (float)$_POST['change_amount'] : 0;
                   $total_amount = 0;
 
-                  // Calculate total
+                  // Calculate total in USD (base currency)
                   foreach ($_SESSION['cart'] as $item) {
                         $total_amount += $item['price'] * $item['quantity'];
+                  }
+
+                  // Get exchange rate and convert amounts
+                  $exchange_rate = $exchangeRate->getExchangeRate('USD', $currency_code);
+                  $original_amount = $total_amount; // Store original USD amount
+                  $converted_total = $exchangeRate->convertCurrency($total_amount, 'USD', $currency_code);
+
+                  // Convert tendered and change amounts if they're in different currency
+                  if ($currency_code !== 'USD') {
+                        $amount_tendered = $exchangeRate->convertCurrency($amount_tendered, $currency_code, 'USD');
+                        $change_amount = $exchangeRate->convertCurrency($change_amount, $currency_code, 'USD');
                   }
 
                   // Validate cash payment
@@ -144,15 +192,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                               $user_id = $_SESSION['user_id'];
                         }
 
-                        $stmt = $pdo->prepare("INSERT INTO orders (user_id, customer_name, customer_email, total_amount, payment_method, amount_tendered, change_amount, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'completed')");
-                        $stmt->execute([$user_id, $customer_name, $customer_email, $total_amount, $payment_method, $amount_tendered, $change_amount]);
+                        $stmt = $pdo->prepare("INSERT INTO orders (user_id, customer_name, customer_email, total_amount, currency_code, exchange_rate, original_amount, payment_method, amount_tendered, change_amount, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed')");
+                        $stmt->execute([$user_id, $customer_name, $customer_email, $converted_total, $currency_code, $exchange_rate, $original_amount, $payment_method, $amount_tendered, $change_amount]);
                         $order_id = $pdo->lastInsertId();
 
                         // Add order items and update stock
                         foreach ($_SESSION['cart'] as $product_id => $item) {
+                              // Convert item price to selected currency
+                              $item_price_usd = $item['price'];
+                              $item_price_converted = $exchangeRate->convertCurrency($item_price_usd, 'USD', $currency_code);
+
                               // Add order item
-                              $stmt = $pdo->prepare("INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)");
-                              $stmt->execute([$order_id, $product_id, $item['quantity'], $item['price']]);
+                              $stmt = $pdo->prepare("INSERT INTO order_items (order_id, product_id, quantity, price, currency_code, exchange_rate) VALUES (?, ?, ?, ?, ?, ?)");
+                              $stmt->execute([$order_id, $product_id, $item['quantity'], $item_price_converted, $currency_code, $exchange_rate]);
 
                               // Update stock
                               $stmt = $pdo->prepare("UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?");
@@ -218,7 +270,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                     <div class="d-flex justify-content-between align-items-start">
                                           <div class="flex-grow-1">
                                                 <h6 class="mb-1"><?php echo htmlspecialchars($item['name']); ?></h6>
-                                                <p class="mb-1 text-muted">$<?php echo number_format($item['price'], 2); ?> each</p>
+                                                <p class="mb-1 text-muted"><?php echo $exchangeRate->formatAmount($item['price'], 'USD'); ?> each</p>
                                                 <div class="quantity-control">
                                                       <button class="quantity-btn" onclick="updateQuantity(<?php echo $product_id; ?>, -1)">-</button>
                                                       <input type="number"
@@ -234,7 +286,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                                 <small class="text-muted">Available: <?php echo $current_stock; ?></small>
                                           </div>
                                           <div class="text-end">
-                                                <h6 class="mb-1">$<?php echo number_format($item['price'] * $item['quantity'], 2); ?></h6>
+                                                <h6 class="mb-1"><?php echo $exchangeRate->formatAmount($item['price'] * $item['quantity'], 'USD'); ?></h6>
                                                 <button class="btn btn-sm btn-outline-danger" onclick="removeFromCart(<?php echo $product_id; ?>)">
                                                       <i class="fas fa-trash"></i>
                                                 </button>
@@ -256,12 +308,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   if (!empty($_SESSION['cart'])) {
                         echo '<div class="d-flex justify-content-between align-items-center mb-3">
                                     <h5 class="mb-0">Total:</h5>
-                                    <h4 class="mb-0 text-primary">$' . number_format($total, 2) . '</h4>
+                                    <h4 class="mb-0 text-primary">' . $exchangeRate->formatAmount($total, 'USD') . '</h4>
                               </div>
-                              <button class="btn btn-success btn-lg w-100 mb-3" onclick="showPaymentModal()">
+                              <button class="btn btn-success btn-lg w-100 mb-3" data-action="show-payment-modal">
                                     <i class="fas fa-credit-card me-2"></i>Process Payment
                               </button>
-                              <button class="btn btn-outline-secondary w-100" onclick="clearCart()">
+                              <button class="btn btn-outline-secondary w-100" data-action="clear-cart">
                                     <i class="fas fa-trash me-2"></i>Clear Cart
                               </button>';
                   }
@@ -270,7 +322,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   echo json_encode([
                         'success' => true,
                         'html' => $cart_html,
-                        'total' => '$' . number_format($total, 2),
+                        'total' => $exchangeRate->formatAmount($total, 'USD'),
                         'payment_html' => $payment_html
                   ]);
                   exit;
@@ -314,7 +366,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                           <p class="card-text small text-muted"><?php echo htmlspecialchars($product['product_code']); ?></p>
                                           <div class="d-flex justify-content-between align-items-center">
                                                 <span class="fw-bold text-primary">
-                                                      $<?php echo number_format($product['discount_price'] ?: $product['price'], 2); ?>
+                                                      <?php echo $exchangeRate->formatAmount($product['discount_price'] ?: $product['price'], 'USD'); ?>
                                                 </span>
                                                 <span class="badge bg-<?php echo $product['stock_quantity'] < 10 ? 'warning' : 'success'; ?>">
                                                       Stock: <?php echo $product['stock_quantity']; ?>
@@ -322,95 +374,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                           </div>
                                           <?php if ($product['discount_price'] && $product['discount_price'] < $product['price']): ?>
                                                 <small class="text-muted text-decoration-line-through">
-                                                      $<?php echo number_format($product['price'], 2); ?>
+                                                      <?php echo $exchangeRate->formatAmount($product['price'], 'USD'); ?>
                                                 </small>
                                           <?php endif; ?>
                                     </div>
                               </div>
                         </div>
-                        <?php
+<?php
                   }
                   $html = ob_get_clean();
                   echo json_encode(['success' => true, 'html' => $html]);
                   exit;
 
-            case 'fetch_cart':
-                  ob_start();
-                  if (empty($_SESSION['cart'])) {
-                        echo '<div class="text-center mt-4 justify-content-center align-items-center d-flex flex-column w-100">
-                                <img src="../images/placeholder-cart.png" alt="Empty Cart" style="width:120px;opacity:0.5;" class="mb-2">
-                                <div class="text-muted">Cart is empty</div>
-                              </div>';
-                  } else {
-                        foreach ($_SESSION['cart'] as $product_id => $item) {
-                              // Get current stock for this product
-                              $stmt = $pdo->prepare("SELECT stock_quantity FROM products WHERE id = ?");
-                              $stmt->execute([$product_id]);
-                              $product = $stmt->fetch(PDO::FETCH_ASSOC);
-                              $current_stock = $product ? $product['stock_quantity'] : 0;
-                        ?>
-                              <div class="cart-item" id="cart-item-<?php echo $product_id; ?>">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                          <div class="flex-grow-1">
-                                                <h6 class="mb-1"><?php echo htmlspecialchars($item['name']); ?></h6>
-                                                <p class="mb-1 text-muted">$<?php echo number_format($item['price'], 2); ?> each</p>
-                                                <div class="quantity-control">
-                                                      <button class="quantity-btn" onclick="updateQuantity(<?php echo $product_id; ?>, -1)">-</button>
-                                                      <input type="number"
-                                                            class="form-control mx-2 quantity-input"
-                                                            value="<?php echo $item['quantity']; ?>"
-                                                            min="1"
-                                                            max="<?php echo $current_stock; ?>"
-                                                            style="width: 60px; text-align: center;"
-                                                            onchange="updateQuantityDirect(<?php echo $product_id; ?>, this.value)"
-                                                            onkeypress="return event.charCode >= 48 && event.charCode <= 57">
-                                                      <button class="quantity-btn" onclick="updateQuantity(<?php echo $product_id; ?>, 1)">+</button>
-                                                </div>
-                                                <small class="text-muted">Available: <?php echo $current_stock; ?></small>
-                                          </div>
-                                          <div class="text-end">
-                                                <h6 class="mb-1">$<?php echo number_format($item['price'] * $item['quantity'], 2); ?></h6>
-                                                <button class="btn btn-sm btn-outline-danger" onclick="removeFromCart(<?php echo $product_id; ?>)">
-                                                      <i class="fas fa-trash"></i>
-                                                </button>
-                                          </div>
-                                    </div>
-                              </div>
-                  <?php
-                        }
-                  }
-                  $cart_html = ob_get_clean();
 
-                  // Generate payment section HTML
-                  ob_start();
-                  $total = 0;
-                  foreach ($_SESSION['cart'] as $item) {
-                        $total += $item['price'] * $item['quantity'];
-                  }
-                  ?>
-                  <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0">Total:</h5>
-                        <h4 class="mb-0 text-primary" id="cart-total">$<?php echo number_format($total, 2); ?></h4>
-                  </div>
-
-                  <?php if (!empty($_SESSION['cart'])): ?>
-                        <button class="btn btn-success btn-lg w-100 mb-3" onclick="showPaymentModal()">
-                              <i class="fas fa-credit-card me-2"></i>Process Payment
-                        </button>
-                        <button class="btn btn-outline-secondary w-100" onclick="clearCart()">
-                              <i class="fas fa-trash me-2"></i>Clear Cart
-                        </button>
-                  <?php endif; ?>
-<?php
-                  $payment_html = ob_get_clean();
-
-                  echo json_encode([
-                        'success' => true,
-                        'html' => $cart_html,
-                        'total' => '$' . number_format($total, 2),
-                        'payment_html' => $payment_html
-                  ]);
-                  exit;
 
             case 'clear_cart':
                   $_SESSION['cart'] = [];
@@ -663,7 +639,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                                             <p class="card-text small text-muted"><?php echo htmlspecialchars($product['product_code']); ?></p>
                                                             <div class="d-flex justify-content-between align-items-center">
                                                                   <span class="fw-bold text-primary">
-                                                                        $<?php echo number_format($product['discount_price'] ?: $product['price'], 2); ?>
+                                                                        <?php echo $exchangeRate->formatAmount($product['discount_price'] ?: $product['price'], 'USD'); ?>
                                                                   </span>
                                                                   <span class="badge bg-<?php echo $product['stock_quantity'] < 10 ? 'warning' : 'success'; ?>">
                                                                         Stock: <?php echo $product['stock_quantity']; ?>
@@ -671,7 +647,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                                             </div>
                                                             <?php if ($product['discount_price'] && $product['discount_price'] < $product['price']): ?>
                                                                   <small class="text-muted text-decoration-line-through">
-                                                                        $<?php echo number_format($product['price'], 2); ?>
+                                                                        <?php echo $exchangeRate->formatAmount($product['price'], 'USD'); ?>
                                                                   </small>
                                                             <?php endif; ?>
                                                       </div>
@@ -705,7 +681,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                                             <div class="d-flex justify-content-between align-items-start">
                                                                   <div class="flex-grow-1">
                                                                         <h6 class="mb-1"><?php echo htmlspecialchars($item['name']); ?></h6>
-                                                                        <p class="mb-1 text-muted">$<?php echo number_format($item['price'], 2); ?> each</p>
+                                                                        <p class="mb-1 text-muted"><?php echo $exchangeRate->formatAmount($item['price'], 'USD'); ?> each</p>
                                                                         <div class="quantity-control">
                                                                               <button class="quantity-btn" onclick="updateQuantity(<?php echo $product_id; ?>, -1)">-</button>
                                                                               <span class="mx-2"><?php echo $item['quantity']; ?></span>
@@ -713,7 +689,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                                                         </div>
                                                                   </div>
                                                                   <div class="text-end">
-                                                                        <h6 class="mb-1">$<?php echo number_format($item['price'] * $item['quantity'], 2); ?></h6>
+                                                                        <h6 class="mb-1"><?php echo $exchangeRate->formatAmount($item['price'] * $item['quantity'], 'USD'); ?></h6>
                                                                         <button class="btn btn-sm btn-outline-danger" onclick="removeFromCart(<?php echo $product_id; ?>)">
                                                                               <i class="fas fa-trash"></i>
                                                                         </button>
@@ -730,23 +706,23 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                           <h5 class="mb-0">Total:</h5>
                                           <h4 class="mb-0 text-primary" id="cart-total">
-                                                $<?php
-                                                      $total = 0;
-                                                      if (!empty($_SESSION['cart'])) {
-                                                            foreach ($_SESSION['cart'] as $item) {
-                                                                  $total += $item['price'] * $item['quantity'];
-                                                            }
+                                                <?php
+                                                $total = 0;
+                                                if (!empty($_SESSION['cart'])) {
+                                                      foreach ($_SESSION['cart'] as $item) {
+                                                            $total += $item['price'] * $item['quantity'];
                                                       }
-                                                      echo number_format($total, 2);
-                                                      ?>
+                                                }
+                                                echo $exchangeRate->formatAmount($total, 'USD');
+                                                ?>
                                           </h4>
                                     </div>
 
                                     <?php if (!empty($_SESSION['cart'])): ?>
-                                          <button class="btn btn-success btn-lg w-100 mb-3" onclick="showPaymentModal()">
+                                          <button class="btn btn-success btn-lg w-100 mb-3" data-action="show-payment-modal">
                                                 <i class="fas fa-credit-card me-2"></i>Process Payment
                                           </button>
-                                          <button class="btn btn-outline-secondary w-100" onclick="clearCart()">
+                                          <button class="btn btn-outline-secondary w-100" data-action="clear-cart">
                                                 <i class="fas fa-trash me-2"></i>Clear Cart
                                           </button>
                                     <?php endif; ?>
@@ -785,12 +761,28 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                                             <option value="other">Other</option>
                                                       </select>
                                                 </div>
+                                                <div class="mb-3">
+                                                      <label for="currency_code" class="form-label">Currency</label>
+                                                      <select class="form-select" id="currency_code" name="currency_code" required onchange="convertCurrency()">
+                                                            <?php foreach ($currencies as $currency): ?>
+                                                                  <option value="<?php echo htmlspecialchars($currency['code']); ?>" <?php echo $currency['is_default'] ? 'selected' : ''; ?>>
+                                                                        <?php echo htmlspecialchars($currency['code']); ?> - <?php echo htmlspecialchars($currency['name']); ?> (<?php echo htmlspecialchars($currency['symbol']); ?>)
+                                                                  </option>
+                                                            <?php endforeach; ?>
+                                                      </select>
+                                                </div>
                                           </div>
                                           <div class="col-md-6">
                                                 <div class="payment-summary">
                                                       <h6 class="text-primary mb-3">Payment Summary</h6>
                                                       <div class="alert alert-info">
-                                                            <strong>Total Amount: $<span id="modal-total">0.00</span></strong>
+                                                            <strong>Total Amount: <span id="modal-total-display">$0.00</span></strong>
+                                                      </div>
+                                                      <div class="alert alert-secondary" id="exchange-rate-info" style="display: none;">
+                                                            <small>
+                                                                  <i class="fas fa-exchange-alt me-1"></i>
+                                                                  Exchange Rate: 1 USD = <span id="current-rate">1.000000</span> <span id="selected-currency-code">USD</span>
+                                                            </small>
                                                       </div>
 
                                                       <!-- Cash Payment Fields -->
@@ -798,7 +790,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                                             <div class="mb-3">
                                                                   <label for="amount_tendered" class="form-label">Amount Tendered</label>
                                                                   <div class="input-group">
-                                                                        <span class="input-group-text">$</span>
+                                                                        <span class="input-group-text" id="tendered-currency-symbol">$</span>
                                                                         <input type="number"
                                                                               class="form-control"
                                                                               id="amount_tendered"
@@ -813,7 +805,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                                             <div class="mb-3">
                                                                   <label for="change_amount" class="form-label">Change</label>
                                                                   <div class="input-group">
-                                                                        <span class="input-group-text">$</span>
+                                                                        <span class="input-group-text" id="change-currency-symbol">$</span>
                                                                         <input type="text"
                                                                               class="form-control"
                                                                               id="change_amount"
@@ -831,7 +823,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                                       <!-- Quick Amount Buttons for Cash -->
                                                       <div id="quick-amounts" style="display: none;" class="mb-3">
                                                             <label class="form-label">Quick Amounts</label>
-                                                            <div class="d-flex flex-wrap gap-2">
+                                                            <div class="d-flex flex-wrap gap-2" id="quick-amount-buttons">
                                                                   <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setQuickAmount(5)">$5</button>
                                                                   <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setQuickAmount(10)">$10</button>
                                                                   <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setQuickAmount(20)">$20</button>
@@ -928,8 +920,8 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         .then(response => response.json())
                         .then(data => {
                               if (data.success) {
-                                    // Fetch and update cart section
-                                    fetchCart();
+                                    // Refresh the page to update cart
+                                    window.location.reload();
                               } else {
                                     alert(data.message);
                               }
@@ -1027,22 +1019,76 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
             }
 
             function showPaymentModal() {
-                  const total = document.getElementById('cart-total').textContent;
-                  document.getElementById('modal-total').textContent = total.replace('$', '');
+                  console.log('showPaymentModal called');
+
+                  // Get cart total
+                  const cartTotalElement = document.getElementById('cart-total');
+                  console.log('Cart total element:', cartTotalElement);
+
+                  if (!cartTotalElement) {
+                        console.error('Cart total element not found');
+                        alert('Cart total not found. Please try again.');
+                        return;
+                  }
+
+                  const total = cartTotalElement.textContent;
+                  console.log('Cart total text:', total);
+
+                  if (!total || total.trim() === '') {
+                        console.error('Cart total is empty');
+                        alert('Cart total is empty. Please add items to cart first.');
+                        return;
+                  }
+
+                  const usdAmount = parseFloat(total.replace(/[^0-9.-]+/g, ''));
+                  console.log('USD amount:', usdAmount);
+
+                  if (isNaN(usdAmount) || usdAmount <= 0) {
+                        console.error('Invalid cart total:', total);
+                        alert('Invalid cart total. Please try again.');
+                        return;
+                  }
+
+                  console.log('Opening modal with total:', total);
+                  openPaymentModalWithTotal(total);
+            }
+
+            function openPaymentModalWithTotal(totalText) {
+                  const usdAmount = parseFloat(totalText.replace(/[^0-9.-]+/g, ''));
+
+                  if (isNaN(usdAmount) || usdAmount <= 0) {
+                        console.error('Invalid cart total:', totalText);
+                        return;
+                  }
+
+                  // Store USD amount for currency conversion
+                  window.currentUSDTotal = usdAmount;
+
+                  // Initialize with default currency
+                  convertCurrency();
 
                   // Reset cash fields when opening modal
-                  document.getElementById('amount_tendered').value = '';
-                  document.getElementById('change_amount').value = '';
-                  document.getElementById('insufficient-amount').style.display = 'none';
+                  const amountTendered = document.getElementById('amount_tendered');
+                  const changeAmount = document.getElementById('change_amount');
+                  const insufficientAmount = document.getElementById('insufficient-amount');
+
+                  if (amountTendered) amountTendered.value = '';
+                  if (changeAmount) changeAmount.value = '';
+                  if (insufficientAmount) insufficientAmount.style.display = 'none';
 
                   // Show/hide cash fields based on payment method
                   toggleCashFields();
 
                   // Show the modal
-                  new bootstrap.Modal(document.getElementById('paymentModal')).show();
+                  const paymentModal = document.getElementById('paymentModal');
+                  if (paymentModal) {
+                        new bootstrap.Modal(paymentModal).show();
+                  } else {
+                        console.error('Payment modal not found');
+                        return;
+                  }
 
-                  // --- ADD THIS: Attach event listeners every time modal opens ---
-                  const amountTendered = document.getElementById('amount_tendered');
+                  // Attach event listeners every time modal opens
                   if (amountTendered) {
                         amountTendered.removeEventListener('input', calculateChange); // Prevent duplicate listeners
                         amountTendered.addEventListener('input', calculateChange);
@@ -1054,8 +1100,107 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                   calculateChange();
             }
 
+            function convertCurrency() {
+                  const currencyCodeElement = document.getElementById('currency_code');
+                  if (!currencyCodeElement) {
+                        console.error('Currency code element not found');
+                        return;
+                  }
+
+                  const currencyCode = currencyCodeElement.value;
+                  const usdAmount = window.currentUSDTotal || 0;
+
+                  if (usdAmount <= 0) {
+                        return;
+                  }
+
+                  fetch('pos.php', {
+                              method: 'POST',
+                              headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded'
+                              },
+                              body: `action=convert_currency&amount=${usdAmount}&from_currency=USD&to_currency=${currencyCode}`
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                              if (data.success) {
+                                    // Update total display
+                                    const modalTotalDisplay = document.getElementById('modal-total-display');
+                                    if (modalTotalDisplay) {
+                                          modalTotalDisplay.textContent = data.formatted_amount;
+                                    }
+
+                                    // Update exchange rate info
+                                    const exchangeRateInfo = document.getElementById('exchange-rate-info');
+                                    const currentRate = document.getElementById('current-rate');
+                                    const selectedCurrencyCode = document.getElementById('selected-currency-code');
+
+                                    if (currencyCode !== 'USD') {
+                                          if (exchangeRateInfo) exchangeRateInfo.style.display = 'block';
+                                          if (currentRate) currentRate.textContent = data.rate.toFixed(6);
+                                          if (selectedCurrencyCode) selectedCurrencyCode.textContent = currencyCode;
+                                    } else {
+                                          if (exchangeRateInfo) exchangeRateInfo.style.display = 'none';
+                                    }
+
+                                    // Update currency symbols
+                                    const symbol = data.formatted_amount.replace(/[\d.,]/g, '').trim();
+                                    const tenderedCurrencySymbol = document.getElementById('tendered-currency-symbol');
+                                    const changeCurrencySymbol = document.getElementById('change-currency-symbol');
+
+                                    if (tenderedCurrencySymbol) tenderedCurrencySymbol.textContent = symbol;
+                                    if (changeCurrencySymbol) changeCurrencySymbol.textContent = symbol;
+
+                                    // Update quick amount buttons
+                                    updateQuickAmountButtons(currencyCode);
+                              }
+                        })
+                        .catch(error => {
+                              console.error('Error converting currency:', error);
+                        });
+            }
+
+            function updateQuickAmountButtons(currencyCode) {
+                  const quickAmounts = [5, 10, 20, 50, 100];
+                  const container = document.getElementById('quick-amount-buttons');
+
+                  if (!container) return;
+
+                  container.innerHTML = '';
+
+                  quickAmounts.forEach(amount => {
+                        fetch('pos.php', {
+                                    method: 'POST',
+                                    headers: {
+                                          'Content-Type': 'application/x-www-form-urlencoded'
+                                    },
+                                    body: `action=convert_currency&amount=${amount}&from_currency=USD&to_currency=${currencyCode}`
+                              })
+                              .then(response => response.json())
+                              .then(data => {
+                                    if (data.success) {
+                                          const button = document.createElement('button');
+                                          button.type = 'button';
+                                          button.className = 'btn btn-outline-secondary btn-sm';
+                                          button.onclick = () => setQuickAmount(data.converted_amount);
+                                          button.textContent = data.formatted_amount;
+                                          container.appendChild(button);
+                                    }
+                              })
+                              .catch(error => {
+                                    console.error('Error updating quick amount button:', error);
+                              });
+                  });
+            }
+
             function toggleCashFields() {
-                  const paymentMethod = document.getElementById('payment_method').value;
+                  const paymentMethodElement = document.getElementById('payment_method');
+                  if (!paymentMethodElement) {
+                        console.error('Payment method element not found');
+                        return;
+                  }
+
+                  const paymentMethod = paymentMethodElement.value;
                   const cashFields = document.getElementById('cash-fields');
                   const quickAmounts = document.getElementById('quick-amounts');
                   const amountTendered = document.getElementById('amount_tendered');
@@ -1063,19 +1208,23 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                   const insufficientAmount = document.getElementById('insufficient-amount');
 
                   if (paymentMethod === 'cash') {
-                        cashFields.style.display = 'block';
-                        quickAmounts.style.display = 'block';
-                        amountTendered.setAttribute('required', 'required');
-                        changeAmount.setAttribute('readonly', 'readonly');
-                        changeAmount.value = '';
-                        insufficientAmount.style.display = 'none';
+                        if (cashFields) cashFields.style.display = 'block';
+                        if (quickAmounts) quickAmounts.style.display = 'block';
+                        if (amountTendered) amountTendered.setAttribute('required', 'required');
+                        if (changeAmount) {
+                              changeAmount.setAttribute('readonly', 'readonly');
+                              changeAmount.value = '';
+                        }
+                        if (insufficientAmount) insufficientAmount.style.display = 'none';
                   } else {
-                        cashFields.style.display = 'none';
-                        quickAmounts.style.display = 'none';
-                        amountTendered.removeAttribute('required');
-                        changeAmount.setAttribute('readonly', 'readonly');
-                        changeAmount.value = '';
-                        insufficientAmount.style.display = 'none';
+                        if (cashFields) cashFields.style.display = 'none';
+                        if (quickAmounts) quickAmounts.style.display = 'none';
+                        if (amountTendered) amountTendered.removeAttribute('required');
+                        if (changeAmount) {
+                              changeAmount.setAttribute('readonly', 'readonly');
+                              changeAmount.value = '';
+                        }
+                        if (insufficientAmount) insufficientAmount.style.display = 'none';
                   }
             }
 
@@ -1085,18 +1234,20 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
             }
 
             function calculateChange() {
-                  const totalAmountElement = document.getElementById('modal-total');
+                  const totalAmountDisplay = document.getElementById('modal-total-display');
                   const amountTenderedElement = document.getElementById('amount_tendered');
                   const changeAmount = document.getElementById('change_amount');
                   const insufficientAmount = document.getElementById('insufficient-amount');
                   const completeBtn = document.getElementById('complete-payment-btn');
 
-                  if (!totalAmountElement || !amountTenderedElement || !changeAmount) {
+                  if (!totalAmountDisplay || !amountTenderedElement || !changeAmount) {
                         console.error('Required elements not found');
                         return;
                   }
 
-                  const totalAmount = parseFloat(totalAmountElement.textContent.trim());
+                  // Extract numeric value from formatted amount (remove currency symbol and commas)
+                  const totalAmountText = totalAmountDisplay.textContent;
+                  const totalAmount = parseFloat(totalAmountText.replace(/[^0-9.-]+/g, ''));
                   const amountTendered = parseFloat(amountTenderedElement.value.trim()) || 0;
 
                   console.log('Total Amount:', totalAmount);
@@ -1177,14 +1328,36 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         .then(res => res.json())
                         .then(data => {
                               if (data.success) {
+                                    // Update cart items
                                     document.getElementById('cart-items-container').innerHTML = data.html;
-                                    document.getElementById('cart-total').textContent = data.total;
+
+                                    // Update cart total
+                                    const cartTotalElement = document.getElementById('cart-total');
+                                    if (cartTotalElement) {
+                                          cartTotalElement.textContent = data.total;
+                                          console.log('Cart total updated:', data.total);
+                                    } else {
+                                          console.error('Cart total element not found!');
+                                    }
 
                                     // Update payment section
                                     const paymentSection = document.querySelector('.payment-section');
                                     if (paymentSection && data.payment_html) {
                                           paymentSection.innerHTML = data.payment_html;
+                                          console.log('Payment section updated with HTML:', data.payment_html);
+                                    } else {
+                                          console.error('Payment section or payment HTML not found!');
                                     }
+
+                                    // Verify the payment button exists after update
+                                    setTimeout(() => {
+                                          const paymentButton = document.querySelector('button[data-action="show-payment-modal"]');
+                                          if (paymentButton) {
+                                                console.log('Payment button found and ready:', paymentButton);
+                                          } else {
+                                                console.error('Payment button not found after update!');
+                                          }
+                                    }, 50);
                               }
                         });
             }
@@ -1407,6 +1580,7 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                   // Add event listeners for payment form
                   const paymentMethod = document.getElementById('payment_method');
                   const amountTendered = document.getElementById('amount_tendered');
+                  const currencyCode = document.getElementById('currency_code');
 
                   if (paymentMethod) {
                         paymentMethod.addEventListener('change', toggleCashFields);
@@ -1415,6 +1589,25 @@ $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
                   if (amountTendered) {
                         amountTendered.addEventListener('input', calculateChange);
                         amountTendered.addEventListener('change', calculateChange);
+                  }
+
+                  if (currencyCode) {
+                        currencyCode.addEventListener('change', convertCurrency);
+                  }
+            });
+
+            // Use event delegation for payment buttons - this works for both static and dynamic buttons
+            document.addEventListener('click', function(e) {
+                  // Handle payment modal button
+                  if (e.target.closest('button[data-action="show-payment-modal"]')) {
+                        e.preventDefault();
+                        showPaymentModal();
+                  }
+
+                  // Handle clear cart button
+                  if (e.target.closest('button[data-action="clear-cart"]')) {
+                        e.preventDefault();
+                        clearCart();
                   }
             });
       </script>
