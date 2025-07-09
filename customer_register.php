@@ -6,7 +6,11 @@ require_once 'config/database.php';
 if (isset($_SESSION['user_id'])) {
       if ($_SESSION['role'] === 'admin') {
             header('Location: admin/index.php');
+      } elseif ($_SESSION['role'] === 'customer') {
+            // Customers should stay on the main page (root)
+            header('Location: index.php');
       } else {
+            // Staff members (cashier, manager) go to user dashboard
             header('Location: user/index.php');
       }
       exit();
@@ -61,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     $success = 'Registration successful! You can now login to access your account and order history.';
                                     // Clear form data
                                     $_POST = array();
-                                    
+
                                     // If redirect parameter is set, redirect to checkout
                                     if (isset($_GET['redirect']) && $_GET['redirect'] === 'checkout') {
                                           header('Location: login.php?redirect=checkout');

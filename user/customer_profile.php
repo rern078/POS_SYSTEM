@@ -28,27 +28,62 @@ $user = getCurrentUser();
 
 <body>
       <div class="customer-layout">
+            <!-- Main Content -->
             <div class="customer-main">
-                  <div class="content-card">
-                        <div class="content-card-header d-flex justify-content-between align-items-center">
-                              <h1 class="content-card-title mb-0">
-                                    <i class="fas fa-user"></i> Profile
-                              </h1>
-                              <a href="#" class="btn btn-modern btn-outline-primary disabled">
-                                    <i class="fas fa-edit me-1"></i>Edit Profile
+                  <!-- Top Navigation -->
+                  <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+                        <div class="container-fluid">
+                              <a href="customer_dashboard.php" class="btn btn-link">
+                                    <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
                               </a>
+
+                              <ul class="navbar-nav ms-auto">
+                                    <li class="nav-item">
+                                          <a class="nav-link" href="../index.php">
+                                                <i class="fas fa-home me-1"></i>Home
+                                          </a>
+                                    </li>
+                                    <li class="nav-item dropdown">
+                                          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                                                <i class="fas fa-user-circle me-1"></i><?php echo $_SESSION['username']; ?>
+                                                <span class="badge bg-success ms-1">Customer</span>
+                                          </a>
+                                          <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" href="customer_dashboard.php"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a></li>
+                                                <li><a class="dropdown-item" href="customer_settings.php"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                                                <li>
+                                                      <hr class="dropdown-divider">
+                                                </li>
+                                                <li><a class="dropdown-item" href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                                          </ul>
+                                    </li>
+                              </ul>
                         </div>
-                        <div class="content-card-body">
-                              <dl class="row mb-0">
-                                    <dt class="col-sm-3">Full Name</dt>
-                                    <dd class="col-sm-9"><?php echo htmlspecialchars($user['full_name']); ?></dd>
-                                    <dt class="col-sm-3">Username</dt>
-                                    <dd class="col-sm-9"><?php echo htmlspecialchars($user['username']); ?></dd>
-                                    <dt class="col-sm-3">Email</dt>
-                                    <dd class="col-sm-9"><?php echo htmlspecialchars($user['email']); ?></dd>
-                                    <dt class="col-sm-3">Member Since</dt>
-                                    <dd class="col-sm-9"><?php echo date('M d, Y', strtotime($user['created_at'])); ?></dd>
-                              </dl>
+                  </nav>
+
+                  <!-- Page Content -->
+                  <div class="admin-content">
+                        <div class="content-card">
+                              <div class="content-card-header d-flex justify-content-between align-items-center">
+                                    <h1 class="content-card-title mb-0">
+                                          <i class="fas fa-user"></i> Profile
+                                    </h1>
+                                    <a href="#" class="btn btn-modern btn-outline-primary disabled">
+                                          <i class="fas fa-edit me-1"></i>Edit Profile
+                                    </a>
+                              </div>
+                              <div class="content-card-body">
+                                    <dl class="row mb-0">
+                                          <dt class="col-sm-3">Full Name</dt>
+                                          <dd class="col-sm-9"><?php echo htmlspecialchars($user['full_name']); ?></dd>
+                                          <dt class="col-sm-3">Username</dt>
+                                          <dd class="col-sm-9"><?php echo htmlspecialchars($user['username']); ?></dd>
+                                          <dt class="col-sm-3">Email</dt>
+                                          <dd class="col-sm-9"><?php echo htmlspecialchars($user['email']); ?></dd>
+                                          <dt class="col-sm-3">Member Since</dt>
+                                          <dd class="col-sm-9"><?php echo date('M d, Y', strtotime($user['created_at'])); ?></dd>
+                                    </dl>
+                              </div>
                         </div>
                   </div>
             </div>

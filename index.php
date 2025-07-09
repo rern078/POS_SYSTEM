@@ -6,10 +6,14 @@ require_once 'config/database.php';
 if (isset($_SESSION['user_id'])) {
       if ($_SESSION['role'] === 'admin') {
             header('Location: admin/index.php');
+      } elseif ($_SESSION['role'] === 'customer') {
+            // Customers should stay on the main page (root)
+            // No redirect needed - they can access the main page
       } else {
+            // Staff members (cashier, manager) go to user dashboard
             header('Location: user/index.php');
+            exit();
       }
-      exit();
 }
 
 // Handle AJAX requests for cart operations

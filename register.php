@@ -4,7 +4,15 @@ require_once 'config/database.php';
 
 // Redirect if already logged in
 if (isset($_SESSION['user_id'])) {
-      header('Location: admin/index.php');
+      if ($_SESSION['role'] === 'admin') {
+            header('Location: admin/index.php');
+      } elseif ($_SESSION['role'] === 'customer') {
+            // Customers should stay on the main page (root)
+            header('Location: index.php');
+      } else {
+            // Staff members (cashier, manager) go to user dashboard
+            header('Location: user/index.php');
+      }
       exit();
 }
 
