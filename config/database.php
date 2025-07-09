@@ -29,6 +29,7 @@ function initializeDatabase()
         email VARCHAR(100) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
         full_name VARCHAR(100),
+        phone VARCHAR(20),
         role ENUM('admin', 'cashier', 'manager', 'customer') DEFAULT 'cashier',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP

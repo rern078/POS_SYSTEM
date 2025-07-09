@@ -23,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $password = $_POST['password'];
                         $role = $_POST['role'];
                         $full_name = trim($_POST['full_name']);
+                        $phone = trim($_POST['phone'] ?? '');
 
                         if (empty($username) || empty($email) || empty($password)) {
                               $error = 'Please fill in all required fields.';
@@ -34,8 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     $error = 'Username or email already exists.';
                               } else {
                                     $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                                    $stmt = $pdo->prepare("INSERT INTO users (username, email, password, full_name, role) VALUES (?, ?, ?, ?, ?)");
-                                    if ($stmt->execute([$username, $email, $hashed_password, $full_name, $role])) {
+                                    $stmt = $pdo->prepare("INSERT INTO users (username, email, password, full_name, phone, role) VALUES (?, ?, ?, ?, ?, ?)");
+                                    if ($stmt->execute([$username, $email, $hashed_password, $full_name, $phone, $role])) {
                                           $message = 'User added successfully!';
                                     } else {
                                           $error = 'Failed to add user.';
@@ -50,6 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $email = trim($_POST['email']);
                         $role = $_POST['role'];
                         $full_name = trim($_POST['full_name']);
+                        $phone = trim($_POST['phone'] ?? '');
                         $password = $_POST['password'];
 
                         if (empty($username) || empty($email)) {
@@ -63,11 +65,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                               } else {
                                     if (!empty($password)) {
                                           $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                                          $stmt = $pdo->prepare("UPDATE users SET username = ?, email = ?, password = ?, full_name = ?, role = ? WHERE id = ?");
-                                          $params = [$username, $email, $hashed_password, $full_name, $role, $id];
+                                          $stmt = $pdo->prepare("UPDATE users SET username = ?, email = ?, password = ?, full_name = ?, phone = ?, role = ? WHERE id = ?");
+                                          $params = [$username, $email, $hashed_password, $full_name, $phone, $role, $id];
                                     } else {
-                                          $stmt = $pdo->prepare("UPDATE users SET username = ?, email = ?, full_name = ?, role = ? WHERE id = ?");
-                                          $params = [$username, $email, $full_name, $role, $id];
+                                          $stmt = $pdo->prepare("UPDATE users SET username = ?, email = ?, full_name = ?, phone = ?, role = ? WHERE id = ?");
+                                          $params = [$username, $email, $full_name, $phone, $role, $id];
                                     }
 
                                     if ($stmt->execute($params)) {
@@ -112,7 +114,8 @@ $whereConditions = [];
 $params = [];
 
 if (!empty($search)) {
-      $whereConditions[] = "(username LIKE ? OR email LIKE ? OR full_name LIKE ?)";
+      $whereConditions[] = "(username LIKE ? OR email LIKE ? OR full_name LIKE ? OR phone LIKE ?)";
+      $params[] = "%$search%";
       $params[] = "%$search%";
       $params[] = "%$search%";
       $params[] = "%$search%";
@@ -323,6 +326,7 @@ $roles = ['admin', 'manager', 'cashier', 'customer'];
                                                             <th>Username</th>
                                                             <th>Full Name</th>
                                                             <th>Email</th>
+                                                            <th>Phone</th>
                                                             <th>Role</th>
                                                             <th>Status</th>
                                                             <th>Created</th>
@@ -343,6 +347,7 @@ $roles = ['admin', 'manager', 'cashier', 'customer'];
                                                                   </td>
                                                                   <td><?php echo htmlspecialchars($user['full_name'] ?? 'N/A'); ?></td>
                                                                   <td><?php echo htmlspecialchars($user['email']); ?></td>
+                                                                  <td><?php echo htmlspecialchars($user['phone'] ?? 'N/A'); ?></td>
                                                                   <td>
                                                                         <span class="badge bg-<?php
                                                                                                 echo $user['role'] === 'admin' ? 'danger' : ($user['role'] === 'manager' ? 'warning' : ($user['role'] === 'cashier' ? 'info' : ($user['role'] === 'customer' ? 'success' : 'secondary')));
@@ -456,6 +461,15 @@ $roles = ['admin', 'manager', 'cashier', 'customer'];
                                           </div>
                                           <div class="col-md-6">
                                                 <div class="mb-3">
+                                                      <label for="phone" class="form-label">Phone Number</label>
+                                                      <input type="tel" class="form-control" id="phone" name="phone" placeholder="Enter phone number">
+                                                </div>
+                                          </div>
+                                    </div>
+
+                                    <div class="row">
+                                          <div class="col-md-6">
+                                                <div class="mb-3">
                                                       <label for="role" class="form-label">Role *</label>
                                                       <select class="form-select" id="role" name="role" required>
                                                             <option value="">Select Role</option>
@@ -519,6 +533,15 @@ $roles = ['admin', 'manager', 'cashier', 'customer'];
                                           </div>
                                           <div class="col-md-6">
                                                 <div class="mb-3">
+                                                      <label for="edit_phone" class="form-label">Phone Number</label>
+                                                      <input type="tel" class="form-control" id="edit_phone" name="phone" placeholder="Enter phone number">
+                                                </div>
+                                          </div>
+                                    </div>
+
+                                    <div class="row">
+                                          <div class="col-md-6">
+                                                <div class="mb-3">
                                                       <label for="edit_role" class="form-label">Role *</label>
                                                       <select class="form-select" id="edit_role" name="role" required>
                                                             <option value="">Select Role</option>
@@ -551,6 +574,7 @@ $roles = ['admin', 'manager', 'cashier', 'customer'];
                   document.getElementById('edit_username').value = user.username;
                   document.getElementById('edit_email').value = user.email;
                   document.getElementById('edit_full_name').value = user.full_name || '';
+                  document.getElementById('edit_phone').value = user.phone || '';
                   document.getElementById('edit_role').value = user.role;
                   document.getElementById('edit_password').value = '';
 

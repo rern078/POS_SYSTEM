@@ -807,29 +807,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         </div>
                         <form id="paymentForm">
                               <div class="modal-body">
-                                    <!-- Customer Login Option -->
-                                    <div class="mb-3">
-                                          <div class="alert alert-info">
-                                                <i class="fas fa-info-circle me-2"></i>
-                                                <strong>Optional:</strong> Login to save your order history and get faster checkout next time.
+                                    <?php if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'customer'): ?>
+                                          <!-- Customer Login Option - Only show for non-logged-in users -->
+                                          <div class="mb-3">
+                                                <div class="alert alert-info">
+                                                      <i class="fas fa-info-circle me-2"></i>
+                                                      <strong>Optional:</strong> Login to save your order history and get faster checkout next time.
+                                                </div>
+                                                <div class="d-flex gap-2 mb-3">
+                                                      <button type="button" class="btn btn-outline-primary btn-sm" onclick="showCustomerLogin()">
+                                                            <i class="fas fa-sign-in-alt me-2"></i>Login as Customer
+                                                      </button>
+                                                      <button type="button" class="btn btn-outline-success btn-sm" onclick="showCustomerRegister()">
+                                                            <i class="fas fa-user-plus me-2"></i>Register as Customer
+                                                      </button>
+                                                </div>
+                                                <div class="text-center">
+                                                      <small class="text-muted">
+                                                            <i class="fas fa-arrow-down me-1"></i>Or continue as guest below
+                                                      </small>
+                                                </div>
                                           </div>
-                                          <div class="d-flex gap-2 mb-3">
-                                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="showCustomerLogin()">
-                                                      <i class="fas fa-sign-in-alt me-2"></i>Login as Customer
-                                                </button>
-                                                <button type="button" class="btn btn-outline-success btn-sm" onclick="showCustomerRegister()">
-                                                      <i class="fas fa-user-plus me-2"></i>Register as Customer
-                                                </button>
+                                    <?php else: ?>
+                                          <!-- Customer Info Display - Show for logged-in customers -->
+                                          <div class="mb-3">
+                                                <div class="alert alert-success">
+                                                      <i class="fas fa-check-circle me-2"></i>
+                                                      <strong>Welcome back!</strong> Your information will be automatically filled.
+                                                </div>
                                           </div>
-                                    </div>
+                                    <?php endif; ?>
 
                                     <div class="mb-3">
                                           <label for="customer_name" class="form-label">Full Name *</label>
-                                          <input type="text" class="form-control" id="customer_name" name="customer_name" required>
+                                          <input type="text" class="form-control" id="customer_name" name="customer_name"
+                                                value="<?php
+                                                            if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer') {
+                                                                  // Try to get full_name from database
+                                                                  try {
+                                                                        $pdo = getDBConnection();
+                                                                        $stmt = $pdo->prepare("SELECT full_name FROM users WHERE id = ?");
+                                                                        $stmt->execute([$_SESSION['user_id']]);
+                                                                        $full_name = $stmt->fetchColumn();
+                                                                        // Use full_name if it exists and is not empty, otherwise use username
+                                                                        echo htmlspecialchars(trim($full_name) ?: $_SESSION['username']);
+                                                                  } catch (Exception $e) {
+                                                                        echo htmlspecialchars($_SESSION['username']);
+                                                                  }
+                                                            }
+                                                            ?>"
+                                                <?php echo isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer' ? 'readonly' : ''; ?>
+                                                required>
+                                          <?php if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer'): ?>
+                                                <small class="text-muted">
+                                                      <i class="fas fa-user-check me-1"></i>Your name from your account
+                                                </small>
+                                          <?php endif; ?>
                                     </div>
                                     <div class="mb-3">
                                           <label for="customer_email" class="form-label">Email Address *</label>
-                                          <input type="email" class="form-control" id="customer_email" name="customer_email" required>
+                                          <input type="email" class="form-control" id="customer_email" name="customer_email"
+                                                value="<?php echo isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer' ? htmlspecialchars($_SESSION['email']) : ''; ?>"
+                                                <?php echo isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer' ? 'readonly' : ''; ?>
+                                                required>
+                                          <?php if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'customer'): ?>
+                                                <small class="text-muted">
+                                                      <i class="fas fa-envelope-check me-1"></i>Your email from your account
+                                                </small>
+                                          <?php endif; ?>
                                     </div>
                                     <div class="mb-3">
                                           <label for="payment_method" class="form-label">Payment Method *</label>
@@ -1195,6 +1240,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
                         paymentModal.show();
                         console.log('Payment modal opened successfully'); // Debug log
+
+                        // Add visual feedback for logged-in customers
+                        const customerNameField = document.getElementById('customer_name');
+                        const customerEmailField = document.getElementById('customer_email');
+
+                        if (customerNameField && customerNameField.readOnly) {
+                              customerNameField.style.backgroundColor = '#f8f9fa';
+                              customerNameField.style.borderColor = '#28a745';
+                        }
+
+                        if (customerEmailField && customerEmailField.readOnly) {
+                              customerEmailField.style.backgroundColor = '#f8f9fa';
+                              customerEmailField.style.borderColor = '#28a745';
+                        }
+
                   } catch (error) {
                         console.error('Error showing payment modal:', error);
                         showNotification('Error opening payment modal', 'error');

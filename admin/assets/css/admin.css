@@ -359,7 +359,7 @@ body {
 
 /* Admin Layout Structure */
 .admin-layout {
-      /* display: flex; */
+      display: flex;
       min-height: 100vh;
 }
 
@@ -619,7 +619,6 @@ body {
       border-radius: 4px;
       transition: var(--transition);
       display: block;
-      /* Show on desktop for testing */
 }
 
 .sidebar-toggle-btn:hover {

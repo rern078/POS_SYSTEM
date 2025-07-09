@@ -59,9 +59,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                               $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
                               $role = 'customer';
 
-                              $stmt = $pdo->prepare("INSERT INTO users (username, email, password, full_name, role) VALUES (?, ?, ?, ?, ?)");
+                              $stmt = $pdo->prepare("INSERT INTO users (username, email, password, full_name, phone, role) VALUES (?, ?, ?, ?, ?, ?)");
 
-                              if ($stmt->execute([$username, $email, $hashedPassword, $full_name, $role])) {
+                              if ($stmt->execute([$username, $email, $hashedPassword, $full_name, $phone, $role])) {
                                     $success = 'Registration successful! You can now login to access your account and order history.';
                                     // Clear form data
                                     $_POST = array();
