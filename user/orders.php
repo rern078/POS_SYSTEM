@@ -76,75 +76,31 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </head>
 
 <body>
-      <!-- Navigation -->
-      <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-            <div class="container-fluid">
-                  <a class="navbar-brand" href="index.php">
-                        <i class="fas fa-store me-2"></i>POS System
-                  </a>
+      <div class="admin-layout">
+            <?php include 'side.php'; ?>
 
-                  <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                        <span class="navbar-toggler-icon"></span>
-                  </button>
+            <!-- Main Content Wrapper -->
+            <div class="admin-main">
+                  <!-- Top Navigation Bar -->
+                  <nav class="admin-topbar">
+                        <div class="topbar-left">
+                              <button class="btn btn-link sidebar-toggle-btn" id="sidebarToggleBtn">
+                                    <i class="fas fa-bars"></i>
+                              </button>
+                              <div class="breadcrumb-container">
+                                    <nav aria-label="breadcrumb">
+                                          <ol class="breadcrumb">
+                                                <li class="breadcrumb-item"><a href="index.php">Dashboard</a></li>
+                                                <li class="breadcrumb-item active" aria-current="page">Orders</li>
+                                          </ol>
+                                    </nav>
+                              </div>
+                        </div>
+                  </nav>
 
-                  <div class="collapse navbar-collapse" id="navbarNav">
-                        <ul class="navbar-nav me-auto">
-                              <li class="nav-item">
-                                    <a class="nav-link" href="index.php">
-                                          <i class="fas fa-tachometer-alt me-1"></i>Dashboard
-                                    </a>
-                              </li>
-                              <li class="nav-item">
-                                    <a class="nav-link" href="pos.php">
-                                          <i class="fas fa-cash-register me-1"></i>POS
-                                    </a>
-                              </li>
-                              <li class="nav-item">
-                                    <a class="nav-link" href="products.php">
-                                          <i class="fas fa-box me-1"></i>Products
-                                    </a>
-                              </li>
-                              <li class="nav-item">
-                                    <a class="nav-link active" href="orders.php">
-                                          <i class="fas fa-shopping-cart me-1"></i>Orders
-                                    </a>
-                              </li>
-                              <li class="nav-item">
-                                    <a class="nav-link" href="receipts.php">
-                                          <i class="fas fa-receipt me-1"></i>Receipts
-                                    </a>
-                              </li>
-                              <?php if (isManager()): ?>
-                                    <li class="nav-item">
-                                          <a class="nav-link" href="reports.php">
-                                                <i class="fas fa-chart-bar me-1"></i>Reports
-                                          </a>
-                                    </li>
-                              <?php endif; ?>
-                        </ul>
-
-                        <ul class="navbar-nav">
-                              <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                                          <i class="fas fa-user-circle me-1"></i><?php echo $_SESSION['username']; ?>
-                                          <span class="badge bg-light text-dark ms-1"><?php echo ucfirst($_SESSION['role']); ?></span>
-                                    </a>
-                                    <ul class="dropdown-menu">
-                                          <li><a class="dropdown-item" href="profile.php"><i class="fas fa-user me-2"></i>Profile</a></li>
-                                          <li><a class="dropdown-item" href="settings.php"><i class="fas fa-cog me-2"></i>Settings</a></li>
-                                          <li>
-                                                <hr class="dropdown-divider">
-                                          </li>
-                                          <li><a class="dropdown-item" href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-                                    </ul>
-                              </li>
-                        </ul>
-                  </div>
-            </div>
-      </nav>
-
-      <!-- Main Content -->
-      <div class="container-fluid mt-4">
+                  <!-- Main Content Area -->
+                  <div class="admin-content">
+                        <div class="container-fluid">
             <div class="row">
                   <div class="col-12">
                         <div class="d-flex justify-content-between align-items-center mb-4">

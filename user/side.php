@@ -1,27 +1,127 @@
-<!-- side.php: User Sidebar Navigation Include -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-      <a class="navbar-brand" href="index.php"><i class="fas fa-store"></i> POS User</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto">
-                  <?php if ($_SESSION['role'] === 'customer'): ?>
-                        <!-- Customer Navigation -->
-                        <li class="nav-item"><a class="nav-link" href="customer_dashboard.php"><i class="fas fa-user"></i> My Dashboard</a></li>
-                        <li class="nav-item"><a class="nav-link" href="../index.php"><i class="fas fa-shopping-cart"></i> Shop</a></li>
-                        <li class="nav-item"><a class="nav-link" href="profile.php"><i class="fas fa-user-circle"></i> Profile</a></li>
-                        <li class="nav-item"><a class="nav-link" href="settings.php"><i class="fas fa-cog"></i> Settings</a></li>
-                  <?php else: ?>
-                        <!-- Staff Navigation -->
-                        <li class="nav-item"><a class="nav-link" href="index.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-                        <li class="nav-item"><a class="nav-link" href="pos.php"><i class="fas fa-cash-register"></i> POS</a></li>
-                        <li class="nav-item"><a class="nav-link" href="products.php"><i class="fas fa-box"></i> Products</a></li>
-                        <li class="nav-item"><a class="nav-link" href="orders.php"><i class="fas fa-shopping-basket"></i> Orders</a></li>
-                        <li class="nav-item"><a class="nav-link" href="receipts.php"><i class="fas fa-receipt"></i> Receipts</a></li>
-                        <li class="nav-item"><a class="nav-link" href="reports.php"><i class="fas fa-file-alt"></i> Reports</a></li>
-                  <?php endif; ?>
-            </ul>
+<!-- side.php: User Left Sidebar Navigation Include -->
+<!-- Sidebar -->
+<nav class="admin-sidebar" id="adminSidebar">
+      <div class="sidebar-header">
+            <a class="sidebar-brand" href="index.php">
+                  <div class="brand-icon">
+                        <i class="fas fa-store"></i>
+                  </div>
+                  <div class="brand-text">
+                        <span class="brand-title">POS System</span>
+                        <span class="brand-subtitle">User Panel</span>
+                  </div>
+            </a>
+            <button class="sidebar-toggle" id="sidebarToggle">
+                  <i class="fas fa-bars"></i>
+            </button>
+      </div>
+
+      <div class="sidebar-content">
+            <div class="sidebar-section">
+                  <h6 class="sidebar-section-title">MAIN NAVIGATION</h6>
+                  <ul class="sidebar-nav">
+                        <li class="sidebar-nav-item">
+                              <a class="sidebar-nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>" href="index.php">
+                                    <i class="fas fa-tachometer-alt"></i>
+                                    <span>Dashboard</span>
+                              </a>
+                        </li>
+                        <li class="sidebar-nav-item">
+                              <a class="sidebar-nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'pos.php' ? 'active' : ''; ?>" href="pos.php">
+                                    <i class="fas fa-cash-register"></i>
+                                    <span>POS</span>
+                              </a>
+                        </li>
+                        <li class="sidebar-nav-item">
+                              <a class="sidebar-nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'products.php' ? 'active' : ''; ?>" href="products.php">
+                                    <i class="fas fa-box"></i>
+                                    <span>Products</span>
+                              </a>
+                        </li>
+                        <li class="sidebar-nav-item">
+                              <a class="sidebar-nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'orders.php' ? 'active' : ''; ?>" href="orders.php">
+                                    <i class="fas fa-shopping-cart"></i>
+                                    <span>Orders</span>
+                              </a>
+                        </li>
+                        <li class="sidebar-nav-item">
+                              <a class="sidebar-nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'receipts.php' ? 'active' : ''; ?>" href="receipts.php">
+                                    <i class="fas fa-receipt"></i>
+                                    <span>Receipts</span>
+                              </a>
+                        </li>
+                  </ul>
+            </div>
+
+            <?php if (isManager()): ?>
+                  <div class="sidebar-section">
+                        <h6 class="sidebar-section-title">MANAGEMENT</h6>
+                        <ul class="sidebar-nav">
+                              <li class="sidebar-nav-item">
+                                    <a class="sidebar-nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'reports.php' ? 'active' : ''; ?>" href="reports.php">
+                                          <i class="fas fa-chart-bar"></i>
+                                          <span>Reports</span>
+                                    </a>
+                              </li>
+                              <li class="sidebar-nav-item">
+                                    <a class="sidebar-nav-link" href="../admin/inventory.php">
+                                          <i class="fas fa-warehouse"></i>
+                                          <span>Inventory</span>
+                                    </a>
+                              </li>
+                              <li class="sidebar-nav-item">
+                                    <a class="sidebar-nav-link" href="../admin/stock_movements.php">
+                                          <i class="fas fa-exchange-alt"></i>
+                                          <span>Stock Movements</span>
+                                    </a>
+                              </li>
+                        </ul>
+                  </div>
+            <?php endif; ?>
+
+            <div class="sidebar-section">
+                  <h6 class="sidebar-section-title">ACCOUNT</h6>
+                  <ul class="sidebar-nav">
+                        <li class="sidebar-nav-item">
+                              <a class="sidebar-nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'profile.php' ? 'active' : ''; ?>" href="profile.php">
+                                    <i class="fas fa-user"></i>
+                                    <span>Profile</span>
+                              </a>
+                        </li>
+                        <li class="sidebar-nav-item">
+                              <a class="sidebar-nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'settings.php' ? 'active' : ''; ?>" href="settings.php">
+                                    <i class="fas fa-cog"></i>
+                                    <span>Settings</span>
+                              </a>
+                        </li>
+                  </ul>
+            </div>
+      </div>
+
+      <div class="sidebar-footer">
+            <div class="user-profile">
+                  <div class="user-avatar">
+                        <i class="fas fa-user-circle"></i>
+                  </div>
+                  <div class="user-info">
+                        <div class="user-name"><?php echo $_SESSION['username']; ?></div>
+                        <div class="user-role"><?php echo ucfirst($_SESSION['role']); ?></div>
+                  </div>
+                  <div class="user-menu">
+                        <div class="dropdown">
+                              <button class="btn btn-link dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-ellipsis-v"></i>
+                              </button>
+                              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                    <li><a class="dropdown-item" href="profile.php"><i class="fas fa-user me-2"></i>Profile</a></li>
+                                    <li><a class="dropdown-item" href="settings.php"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                                    <li>
+                                          <hr class="dropdown-divider">
+                                    </li>
+                                    <li><a class="dropdown-item" href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                              </ul>
+                        </div>
+                  </div>
+            </div>
       </div>
 </nav>
-<!-- End User Sidebar -->
