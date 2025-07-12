@@ -56,6 +56,12 @@
                                     <span>Inventory</span>
                               </a>
                         </li>
+                        <li class="sidebar-nav-item">
+                              <a class="sidebar-nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'stock_movements.php' ? 'active' : ''; ?>" href="stock_movements.php">
+                                    <i class="fas fa-exchange-alt"></i>
+                                    <span>Stock Movements</span>
+                              </a>
+                        </li>
                   </ul>
             </div>
 

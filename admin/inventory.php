@@ -102,6 +102,113 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                               }
                         }
                         break;
+
+                  case 'stock_in':
+                        $product_id = intval($_POST['product_id']);
+                        $quantity = intval($_POST['quantity']);
+                        $supplier = trim($_POST['supplier']);
+                        $reference = trim($_POST['reference']);
+                        $notes = trim($_POST['notes']);
+
+                        if ($quantity <= 0) {
+                              $error = 'Quantity must be greater than 0.';
+                        } else {
+                              try {
+                                    $pdo->beginTransaction();
+
+                                    // Get current stock
+                                    $stmt = $pdo->prepare("SELECT stock_quantity, name FROM products WHERE id = ?");
+                                    $stmt->execute([$product_id]);
+                                    $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                                    if ($product) {
+                                          $old_quantity = $product['stock_quantity'];
+                                          $new_quantity = $old_quantity + $quantity;
+
+                                          // Update product stock
+                                          $stmt = $pdo->prepare("UPDATE products SET stock_quantity = ? WHERE id = ?");
+                                          if ($stmt->execute([$new_quantity, $product_id])) {
+                                                // Log the stock in
+                                                $log_notes = "Stock In: $quantity units";
+                                                if ($supplier) $log_notes .= " from $supplier";
+                                                if ($reference) $log_notes .= ". Reference: $reference";
+                                                if ($notes) $log_notes .= ". Notes: $notes";
+
+                                                $stmt = $pdo->prepare("INSERT INTO inventory_adjustments (product_id, adjustment_type, old_quantity, new_quantity, notes, adjusted_by) VALUES (?, 'stock_in', ?, ?, ?, ?)");
+                                                $stmt->execute([$product_id, $old_quantity, $new_quantity, $log_notes, $_SESSION['user_id']]);
+
+                                                $pdo->commit();
+                                                $message = "Stock In successful! Added $quantity units to " . $product['name'];
+                                          } else {
+                                                $pdo->rollBack();
+                                                $error = 'Failed to update stock.';
+                                          }
+                                    } else {
+                                          $pdo->rollBack();
+                                          $error = 'Product not found.';
+                                    }
+                              } catch (Exception $e) {
+                                    $pdo->rollBack();
+                                    $error = 'Database error: ' . $e->getMessage();
+                              }
+                        }
+                        break;
+
+                  case 'stock_out':
+                        $product_id = intval($_POST['product_id']);
+                        $quantity = intval($_POST['quantity']);
+                        $reason = $_POST['reason'];
+                        $reference = trim($_POST['reference']);
+                        $notes = trim($_POST['notes']);
+
+                        if ($quantity <= 0) {
+                              $error = 'Quantity must be greater than 0.';
+                        } else {
+                              try {
+                                    $pdo->beginTransaction();
+
+                                    // Get current stock
+                                    $stmt = $pdo->prepare("SELECT stock_quantity, name FROM products WHERE id = ?");
+                                    $stmt->execute([$product_id]);
+                                    $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                                    if ($product) {
+                                          $old_quantity = $product['stock_quantity'];
+
+                                          if ($old_quantity < $quantity) {
+                                                $pdo->rollBack();
+                                                $error = 'Insufficient stock. Available: ' . $old_quantity . ', Requested: ' . $quantity;
+                                          } else {
+                                                $new_quantity = $old_quantity - $quantity;
+
+                                                // Update product stock
+                                                $stmt = $pdo->prepare("UPDATE products SET stock_quantity = ? WHERE id = ?");
+                                                if ($stmt->execute([$new_quantity, $product_id])) {
+                                                      // Log the stock out
+                                                      $log_notes = "Stock Out: $quantity units. Reason: $reason";
+                                                      if ($reference) $log_notes .= ". Reference: $reference";
+                                                      if ($notes) $log_notes .= ". Notes: $notes";
+
+                                                      $stmt = $pdo->prepare("INSERT INTO inventory_adjustments (product_id, adjustment_type, old_quantity, new_quantity, notes, adjusted_by) VALUES (?, 'stock_out', ?, ?, ?, ?)");
+                                                      $stmt->execute([$product_id, $old_quantity, $new_quantity, $log_notes, $_SESSION['user_id']]);
+
+                                                      $pdo->commit();
+                                                      $message = "Stock Out successful! Removed $quantity units from " . $product['name'];
+                                                } else {
+                                                      $pdo->rollBack();
+                                                      $error = 'Failed to update stock.';
+                                                }
+                                          }
+                                    } else {
+                                          $pdo->rollBack();
+                                          $error = 'Product not found.';
+                                    }
+                              } catch (Exception $e) {
+                                    $pdo->rollBack();
+                                    $error = 'Database error: ' . $e->getMessage();
+                              }
+                        }
+                        break;
             }
       }
 }
@@ -270,12 +377,21 @@ $stats = $stmt->fetch(PDO::FETCH_ASSOC);
                                                 <p class="text-muted mb-0">Monitor and manage your product inventory levels.</p>
                                           </div>
                                           <div>
+                                                <button class="btn btn-modern btn-success me-2" data-bs-toggle="modal" data-bs-target="#quickStockInModal">
+                                                      <i class="fas fa-plus me-2"></i>Quick Stock In
+                                                </button>
+                                                <button class="btn btn-modern btn-danger me-2" data-bs-toggle="modal" data-bs-target="#quickStockOutModal">
+                                                      <i class="fas fa-minus me-2"></i>Quick Stock Out
+                                                </button>
                                                 <button class="btn btn-modern btn-warning me-2" data-bs-toggle="modal" data-bs-target="#bulkUpdateModal">
                                                       <i class="fas fa-edit me-2"></i>Bulk Update
                                                 </button>
                                                 <button class="btn btn-modern btn-primary" onclick="exportInventory()">
                                                       <i class="fas fa-download me-2"></i>Export
                                                 </button>
+                                                <a href="stock_movements.php" class="btn btn-modern btn-info">
+                                                      <i class="fas fa-exchange-alt me-2"></i>View Movements
+                                                </a>
                                           </div>
                                     </div>
                               </div>
@@ -607,6 +723,131 @@ $stats = $stmt->fetch(PDO::FETCH_ASSOC);
             </div>
       </div>
 
+      <!-- Quick Stock In Modal -->
+      <div class="modal fade" id="quickStockInModal" tabindex="-1" aria-labelledby="quickStockInModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                  <div class="modal-content">
+                        <div class="modal-header">
+                              <h5 class="modal-title" id="quickStockInModalLabel">
+                                    <i class="fas fa-plus-circle text-success me-2"></i>Quick Stock In
+                              </h5>
+                              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form method="POST" class="form-modern">
+                              <div class="modal-body">
+                                    <input type="hidden" name="action" value="stock_in">
+
+                                    <div class="mb-3">
+                                          <label for="quick_stock_in_product_id" class="form-label">Product *</label>
+                                          <select class="form-select" id="quick_stock_in_product_id" name="product_id" required>
+                                                <option value="">Select Product</option>
+                                                <?php foreach ($inventory as $item): ?>
+                                                      <option value="<?php echo $item['id']; ?>">
+                                                            <?php echo htmlspecialchars($item['name']); ?>
+                                                            (Current: <?php echo $item['stock_quantity']; ?>)
+                                                      </option>
+                                                <?php endforeach; ?>
+                                          </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                          <label for="quick_quantity" class="form-label">Quantity to Add *</label>
+                                          <input type="number" class="form-control" id="quick_quantity" name="quantity" min="1" required>
+                                    </div>
+
+                                    <div class="mb-3">
+                                          <label for="quick_supplier" class="form-label">Supplier</label>
+                                          <input type="text" class="form-control" id="quick_supplier" name="supplier" placeholder="Supplier name">
+                                    </div>
+
+                                    <div class="mb-3">
+                                          <label for="quick_reference" class="form-label">Reference</label>
+                                          <input type="text" class="form-control" id="quick_reference" name="reference" placeholder="Invoice, PO, etc.">
+                                    </div>
+
+                                    <div class="mb-3">
+                                          <label for="quick_stock_in_notes" class="form-label">Notes</label>
+                                          <textarea class="form-control" id="quick_stock_in_notes" name="notes" rows="2" placeholder="Optional notes"></textarea>
+                                    </div>
+                              </div>
+                              <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-success">
+                                          <i class="fas fa-plus-circle me-2"></i>Add Stock
+                                    </button>
+                              </div>
+                        </form>
+                  </div>
+            </div>
+      </div>
+
+      <!-- Quick Stock Out Modal -->
+      <div class="modal fade" id="quickStockOutModal" tabindex="-1" aria-labelledby="quickStockOutModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                  <div class="modal-content">
+                        <div class="modal-header">
+                              <h5 class="modal-title" id="quickStockOutModalLabel">
+                                    <i class="fas fa-minus-circle text-danger me-2"></i>Quick Stock Out
+                              </h5>
+                              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form method="POST" class="form-modern">
+                              <div class="modal-body">
+                                    <input type="hidden" name="action" value="stock_out">
+
+                                    <div class="mb-3">
+                                          <label for="quick_stock_out_product_id" class="form-label">Product *</label>
+                                          <select class="form-select" id="quick_stock_out_product_id" name="product_id" required>
+                                                <option value="">Select Product</option>
+                                                <?php foreach ($inventory as $item): ?>
+                                                      <option value="<?php echo $item['id']; ?>" data-stock="<?php echo $item['stock_quantity']; ?>">
+                                                            <?php echo htmlspecialchars($item['name']); ?>
+                                                            (Current: <?php echo $item['stock_quantity']; ?>)
+                                                      </option>
+                                                <?php endforeach; ?>
+                                          </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                          <label for="quick_stock_out_quantity" class="form-label">Quantity to Remove *</label>
+                                          <input type="number" class="form-control" id="quick_stock_out_quantity" name="quantity" min="1" required>
+                                          <div class="form-text">Available stock: <span id="available_stock">-</span></div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                          <label for="quick_reason" class="form-label">Reason *</label>
+                                          <select class="form-select" id="quick_reason" name="reason" required>
+                                                <option value="">Select Reason</option>
+                                                <option value="damage">Damage/Loss</option>
+                                                <option value="expiry">Expiry</option>
+                                                <option value="theft">Theft</option>
+                                                <option value="quality_control">Quality Control</option>
+                                                <option value="transfer">Transfer</option>
+                                                <option value="other">Other</option>
+                                          </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                          <label for="quick_stock_out_reference" class="form-label">Reference</label>
+                                          <input type="text" class="form-control" id="quick_stock_out_reference" name="reference" placeholder="Document reference">
+                                    </div>
+
+                                    <div class="mb-3">
+                                          <label for="quick_stock_out_notes" class="form-label">Notes</label>
+                                          <textarea class="form-control" id="quick_stock_out_notes" name="notes" rows="2" placeholder="Optional notes"></textarea>
+                                    </div>
+                              </div>
+                              <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-danger">
+                                          <i class="fas fa-minus-circle me-2"></i>Remove Stock
+                                    </button>
+                              </div>
+                        </form>
+                  </div>
+            </div>
+      </div>
+
       <!-- Bulk Update Modal -->
       <div class="modal fade" id="bulkUpdateModal" tabindex="-1" aria-labelledby="bulkUpdateModalLabel" aria-hidden="true">
             <div class="modal-dialog">
@@ -705,6 +946,17 @@ $stats = $stmt->fetch(PDO::FETCH_ASSOC);
             function printPage() {
                   window.print();
             }
+
+            // Show available stock when product is selected in quick stock out modal
+            document.getElementById('quick_stock_out_product_id').addEventListener('change', function() {
+                  const selectedOption = this.options[this.selectedIndex];
+                  const availableStock = selectedOption.getAttribute('data-stock');
+                  document.getElementById('available_stock').textContent = availableStock || '-';
+
+                  // Set max value for quantity input
+                  const quantityInput = document.getElementById('quick_stock_out_quantity');
+                  quantityInput.max = availableStock;
+            });
       </script>
 </body>
 
