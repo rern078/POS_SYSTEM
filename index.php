@@ -386,10 +386,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                                 <li><a class="dropdown-item" href="user/customer_dashboard.php">
                                                             <i class="fas fa-tachometer-alt me-2"></i>My Dashboard
                                                       </a></li>
-                                                <li><a class="dropdown-item" href="user/profile.php">
+                                                <li><a class="dropdown-item" href="user/customer_profile.php">
                                                             <i class="fas fa-user me-2"></i>Profile
                                                       </a></li>
-                                                <li><a class="dropdown-item" href="user/settings.php">
+                                                <li><a class="dropdown-item" href="user/customer_settings.php">
                                                             <i class="fas fa-cog me-2"></i>Settings
                                                       </a></li>
                                                 <li>

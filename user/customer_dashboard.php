@@ -69,8 +69,8 @@ $total_spent = $stmt->fetchColumn();
                                                 <span class="badge bg-success ms-1">Customer</span>
                                           </a>
                                           <ul class="dropdown-menu">
-                                                <li><a class="dropdown-item" href="profile.php"><i class="fas fa-user me-2"></i>Profile</a></li>
-                                                <li><a class="dropdown-item" href="settings.php"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                                                <li><a class="dropdown-item" href="customer_profile.php"><i class="fas fa-user me-2"></i>Profile</a></li>
+                                                <li><a class="dropdown-item" href="customer_settings.php"><i class="fas fa-cog me-2"></i>Settings</a></li>
                                                 <li>
                                                       <hr class="dropdown-divider">
                                                 </li>
