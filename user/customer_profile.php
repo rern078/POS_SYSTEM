@@ -23,66 +23,89 @@ $user = getCurrentUser();
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-      <link rel="stylesheet" href="../assets/css/customer.css">
+      <link rel="stylesheet" href="../assets/css/user.css">
 </head>
 
 <body>
       <div class="customer-layout">
             <!-- Main Content -->
             <div class="customer-main">
-                  <!-- Top Navigation -->
-                  <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
-                        <div class="container-fluid">
-                              <a href="customer_dashboard.php" class="btn btn-link">
-                                    <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
-                              </a>
-
-                              <ul class="navbar-nav ms-auto">
-                                    <li class="nav-item">
-                                          <a class="nav-link" href="../index.php">
-                                                <i class="fas fa-home me-1"></i>Home
-                                          </a>
-                                    </li>
-                                    <li class="nav-item dropdown">
-                                          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                                                <i class="fas fa-user-circle me-1"></i><?php echo $_SESSION['username']; ?>
-                                                <span class="badge bg-success ms-1">Customer</span>
-                                          </a>
-                                          <ul class="dropdown-menu">
-                                                <li><a class="dropdown-item" href="customer_dashboard.php"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a></li>
-                                                <li><a class="dropdown-item" href="customer_settings.php"><i class="fas fa-cog me-2"></i>Settings</a></li>
-                                                <li>
-                                                      <hr class="dropdown-divider">
-                                                </li>
-                                                <li><a class="dropdown-item" href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-                                          </ul>
-                                    </li>
-                              </ul>
-                        </div>
-                  </nav>
+                  <!-- Back Button -->
+                  <div class="back-button-container">
+                        <a href="customer_dashboard.php" class="back-btn">
+                              <i class="fas fa-arrow-left"></i>
+                              <span>Back to Dashboard</span>
+                        </a>
+                  </div>
 
                   <!-- Page Content -->
-                  <div class="admin-content">
-                        <div class="content-card">
-                              <div class="content-card-header d-flex justify-content-between align-items-center">
-                                    <h1 class="content-card-title mb-0">
-                                          <i class="fas fa-user"></i> Profile
-                                    </h1>
-                                    <a href="#" class="btn btn-modern btn-outline-primary disabled">
-                                          <i class="fas fa-edit me-1"></i>Edit Profile
-                                    </a>
-                              </div>
-                              <div class="content-card-body">
-                                    <dl class="row mb-0">
-                                          <dt class="col-sm-3">Full Name</dt>
-                                          <dd class="col-sm-9"><?php echo htmlspecialchars($user['full_name']); ?></dd>
-                                          <dt class="col-sm-3">Username</dt>
-                                          <dd class="col-sm-9"><?php echo htmlspecialchars($user['username']); ?></dd>
-                                          <dt class="col-sm-3">Email</dt>
-                                          <dd class="col-sm-9"><?php echo htmlspecialchars($user['email']); ?></dd>
-                                          <dt class="col-sm-3">Member Since</dt>
-                                          <dd class="col-sm-9"><?php echo date('M d, Y', strtotime($user['created_at'])); ?></dd>
-                                    </dl>
+                  <div class="content-card">
+                        <div class="content-card-header">
+                              <h1 class="content-card-title">
+                                    <i class="fas fa-user"></i> Customer Profile
+                              </h1>
+                        </div>
+                        <div class="content-card-body">
+                              <div class="row">
+                                    <div class="col-md-4 text-center">
+                                          <div class="stats-card">
+                                                <div class="stats-icon" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));">
+                                                      <i class="fas fa-user-circle"></i>
+                                                </div>
+                                                <h5 class="mt-3"><?php echo htmlspecialchars($user['full_name'] ?: $user['username']); ?></h5>
+                                                <span class="badge bg-success">Customer</span>
+                                          </div>
+                                    </div>
+                                    <div class="col-md-8">
+                                          <div class="row mb-3">
+                                                <div class="col-sm-3">
+                                                      <strong class="text-muted">Full Name:</strong>
+                                                </div>
+                                                <div class="col-sm-9">
+                                                      <?php echo htmlspecialchars($user['full_name'] ?: 'Not provided'); ?>
+                                                </div>
+                                          </div>
+                                          <div class="row mb-3">
+                                                <div class="col-sm-3">
+                                                      <strong class="text-muted">Username:</strong>
+                                                </div>
+                                                <div class="col-sm-9">
+                                                      <?php echo htmlspecialchars($user['username']); ?>
+                                                </div>
+                                          </div>
+                                          <div class="row mb-3">
+                                                <div class="col-sm-3">
+                                                      <strong class="text-muted">Email:</strong>
+                                                </div>
+                                                <div class="col-sm-9">
+                                                      <?php echo htmlspecialchars($user['email']); ?>
+                                                </div>
+                                          </div>
+                                          <div class="row mb-3">
+                                                <div class="col-sm-3">
+                                                      <strong class="text-muted">Member Since:</strong>
+                                                </div>
+                                                <div class="col-sm-9">
+                                                      <?php echo date('M d, Y', strtotime($user['created_at'])); ?>
+                                                </div>
+                                          </div>
+                                          <?php if (!empty($user['phone'])): ?>
+                                                <div class="row mb-3">
+                                                      <div class="col-sm-3">
+                                                            <strong class="text-muted">Phone:</strong>
+                                                      </div>
+                                                      <div class="col-sm-9">
+                                                            <?php echo htmlspecialchars($user['phone']); ?>
+                                                      </div>
+                                                </div>
+                                          <?php endif; ?>
+
+                                          <div class="mt-4">
+                                                <a href="customer_settings.php" class="btn btn-modern btn-primary">
+                                                      <i class="fas fa-cog me-2"></i>Account Settings
+                                                </a>
+                                          </div>
+                                    </div>
                               </div>
                         </div>
                   </div>

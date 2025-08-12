@@ -381,6 +381,10 @@ body {
       width: var(--sidebar-collapsed-width);
 }
 
+.admin-sidebar.collapsed .sidebar-section {
+      margin-bottom: 0;
+}
+
 /* Sidebar Header */
 .sidebar-header {
       padding: 1.5rem;
@@ -1137,7 +1141,7 @@ body {
       background: white;
       border: 1px solid #ddd;
       border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .receipt-print table {
@@ -1204,11 +1208,11 @@ body {
             margin: 0;
             padding: 10px;
       }
-      
+
       .receipt-print table {
             font-size: 12px;
       }
-      
+
       .receipt-print th,
       .receipt-print td {
             padding: 3px;
@@ -1428,21 +1432,21 @@ body {
       .rate-card {
             margin-bottom: 1rem;
       }
-      
+
       .rate-card-header {
             flex-direction: column;
             align-items: flex-start;
       }
-      
+
       .rate-currency-symbol {
             margin-top: 0.5rem;
       }
-      
+
       .rate-number {
             font-size: 1.25rem;
       }
-      
-      .rate-history-controls .row > div {
+
+      .rate-history-controls .row>div {
             margin-bottom: 1rem;
       }
 }

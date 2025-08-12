@@ -1,44 +1,90 @@
 /* Customer Dashboard Styles */
 body {
       font-family: 'Inter', Arial, sans-serif;
-      background: #f7f9fb;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: #222;
+      min-height: 100vh;
 }
 
 .customer-layout {
       display: flex;
       min-height: 100vh;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
 }
 
 .customer-main {
       flex: 1;
-      padding: 32px 16px 16px 16px;
-      background: #f7f9fb;
+      max-width: 1200px;
+      width: 100%;
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      position: relative;
+}
+
+.back-button-container {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 10;
+}
+
+.back-btn {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 25px;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.back-btn:hover {
+      color: #5a6fd8;
+      background: rgba(255, 255, 255, 1);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.back-btn i {
+      margin-right: 8px;
 }
 
 .content-card {
       background: #fff;
-      border-radius: 18px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-      margin-bottom: 24px;
+      border-radius: 0;
+      box-shadow: none;
+      margin-bottom: 0;
       border: none;
 }
 
 .content-card-header {
       border-bottom: 1px solid #f0f0f0;
-      padding: 24px 24px 12px 24px;
-      background: transparent;
-      border-radius: 18px 18px 0 0;
+      padding: 30px 30px 20px 30px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      text-align: center;
 }
 
 .content-card-title {
-      font-size: 1.5rem;
+      font-size: 1.8rem;
       font-weight: 600;
-      color: #2d3748;
+      color: white;
+      margin: 0;
+}
+
+.content-card-title i {
+      margin-right: 10px;
+      font-size: 1.6rem;
 }
 
 .content-card-body {
-      padding: 24px;
+      padding: 40px 30px;
 }
 
 .stats-icon {
@@ -88,22 +134,68 @@ body {
 }
 
 .btn-modern {
-      border-radius: 8px;
-      font-weight: 500;
-      padding: 8px 20px;
+      border-radius: 12px;
+      font-weight: 600;
+      padding: 15px 30px;
       font-size: 1rem;
-      transition: background 0.2s, color 0.2s;
+      transition: all 0.3s ease;
+      border: none;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
 }
 
 .btn-modern.btn-primary {
-      background: #4f8cff;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: #fff;
-      border: none;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
 }
 
 .btn-modern.btn-primary:hover {
-      background: #2563eb;
+      background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
       color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.form-control {
+      border-radius: 12px;
+      border: 2px solid #e1e5e9;
+      padding: 15px 20px;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      background: #f8f9fa;
+}
+
+.form-control:focus {
+      border-color: #667eea;
+      box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+      background: #fff;
+}
+
+.form-label {
+      font-weight: 600;
+      color: #495057;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+}
+
+.alert {
+      border-radius: 12px;
+      border: none;
+      padding: 15px 20px;
+      margin-bottom: 25px;
+}
+
+.alert-success {
+      background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+      color: #155724;
+      border-left: 4px solid #28a745;
+}
+
+.alert-danger {
+      background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+      color: #721c24;
+      border-left: 4px solid #dc3545;
 }
 
 .table {
@@ -133,21 +225,261 @@ body {
       font-weight: 500;
 }
 
-@media (max-width: 768px) {
+/* Enhanced Responsive Design */
+@media (max-width: 1200px) {
       .customer-main {
-            padding: 12px 4px;
+            max-width: 450px;
       }
 
       .content-card-body,
       .content-card-header {
-            padding: 14px;
+            padding: 25px;
+      }
+}
+
+@media (max-width: 992px) {
+      .customer-main {
+            max-width: 400px;
+      }
+
+      .content-card-body,
+      .content-card-header {
+            padding: 20px;
+      }
+
+      .content-card-title {
+            font-size: 1.5rem;
+      }
+
+      .stats-number {
+            font-size: 1.6rem;
+      }
+}
+
+@media (max-width: 768px) {
+      .customer-layout {
+            padding: 15px;
+      }
+
+      .customer-main {
+            max-width: 100%;
+            border-radius: 15px;
+      }
+
+      .back-button-container {
+            top: 15px;
+            left: 15px;
+      }
+
+      .back-btn {
+            padding: 6px 12px;
+            font-size: 0.9rem;
+      }
+
+      .content-card-body,
+      .content-card-header {
+            padding: 20px;
+      }
+
+      .content-card-title {
+            font-size: 1.3rem;
+      }
+
+      .stats-number {
+            font-size: 1.2rem;
+      }
+
+      /* Mobile Navigation Improvements */
+      .navbar-nav {
+            margin-top: 10px;
+      }
+
+      .navbar-nav .nav-link {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+      }
+
+      .navbar-nav .nav-link:last-child {
+            border-bottom: none;
+      }
+
+      /* Mobile Form Improvements */
+      .form-control {
+            font-size: 16px;
+            padding: 12px 16px;
+      }
+
+      .form-label {
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+      }
+
+      .btn-modern {
+            width: 100%;
+            padding: 12px 20px;
+            font-size: 1rem;
+            margin-top: 10px;
+      }
+
+      /* Mobile Card Improvements */
+      .content-card {
+            margin-bottom: 16px;
+            border-radius: 12px;
+      }
+
+      .content-card-header {
+            border-radius: 12px 12px 0 0;
+      }
+}
+
+@media (max-width: 576px) {
+      .customer-layout {
+            padding: 10px;
+      }
+
+      .customer-main {
+            border-radius: 12px;
+      }
+
+      .back-button-container {
+            top: 10px;
+            left: 10px;
+      }
+
+      .back-btn {
+            padding: 5px 10px;
+            font-size: 0.8rem;
+      }
+
+      .back-btn span {
+            display: none;
+      }
+
+      .content-card-body,
+      .content-card-header {
+            padding: 15px;
       }
 
       .content-card-title {
             font-size: 1.1rem;
       }
 
-      .stats-number {
-            font-size: 1.2rem;
+      /* Extra Small Mobile Improvements */
+      .navbar-brand {
+            font-size: 1rem;
+      }
+
+      .btn-link {
+            font-size: 0.9rem;
+            padding: 6px 8px;
+      }
+
+      .form-control {
+            padding: 10px 12px;
+      }
+
+      .btn-modern {
+            padding: 10px 16px;
+            font-size: 0.9rem;
+      }
+
+      /* Hide less important elements on very small screens */
+      .badge {
+            font-size: 0.8em;
+            padding: 4px 8px;
+      }
+}
+
+@media (max-width: 480px) {
+      .customer-layout {
+            padding: 5px;
+      }
+
+      .customer-main {
+            border-radius: 10px;
+      }
+
+      .back-button-container {
+            top: 8px;
+            left: 8px;
+      }
+
+      .back-btn {
+            padding: 4px 8px;
+            font-size: 0.75rem;
+      }
+
+      .content-card-body,
+      .content-card-header {
+            padding: 12px;
+      }
+
+      /* Ultra Small Mobile */
+      .navbar .container-fluid {
+            padding-left: 8px;
+            padding-right: 8px;
+      }
+
+      .btn-link {
+            font-size: 0.8rem;
+            padding: 4px 6px;
+      }
+
+      .form-control {
+            padding: 8px 10px;
+            font-size: 14px;
+      }
+
+      .btn-modern {
+            padding: 8px 12px;
+            font-size: 0.85rem;
+      }
+}
+
+/* Landscape Mobile Optimization */
+@media (max-width: 768px) and (orientation: landscape) {
+      .customer-layout {
+            padding: 10px;
+      }
+
+      .customer-main {
+            max-width: 90%;
+      }
+
+      .content-card-body,
+      .content-card-header {
+            padding: 15px;
+      }
+
+      .navbar-nav {
+            margin-top: 5px;
+      }
+}
+
+/* High DPI Display Optimization */
+@media (-webkit-min-device-pixel-ratio: 2),
+(min-resolution: 192dpi) {
+      .content-card {
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+      }
+}
+
+/* Print Styles */
+@media print {
+      .customer-main {
+            padding: 0;
+            background: white;
+            box-shadow: none;
+      }
+
+      .content-card {
+            box-shadow: none;
+            border: 1px solid #ddd;
+      }
+
+      .navbar,
+      .btn-modern,
+      .back-button-container {
+            display: none;
       }
 }

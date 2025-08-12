@@ -53,17 +53,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
       <!-- Font Awesome -->
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+      <!-- Google Fonts -->
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
       <!-- Custom CSS -->
-      <link rel="stylesheet" href="../admin/assets/css/admin.css">
+      <link rel="stylesheet" href="../assets/css/user.css">
 </head>
 
 <body>
-      <div class="admin-layout">
+      <div class="user-layout">
             <?php include 'side.php'; ?>
-            <div class="admin-main">
-                  <nav class="admin-topbar">
+            <div class="user-main" id="userMain">
+                  <nav class="user-topbar">
                         <div class="topbar-left">
-                              <button class="btn btn-link sidebar-toggle-btn" id="sidebarToggleBtn">
+                              <button class="sidebar-toggle-btn" id="sidebarToggleBtn">
                                     <i class="fas fa-bars"></i>
                               </button>
                               <div class="breadcrumb-container">
@@ -76,52 +78,124 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                               </div>
                         </div>
                   </nav>
-                  <div class="admin-content">
-                        <div class="container-fluid mt-4">
-                              <div class="row justify-content-center">
-                                    <div class="col-md-6">
-                                          <div class="card">
-                                                <div class="card-header">
-                                                      <h4 class="mb-0"><i class="fas fa-cog me-2"></i>Account Settings</h4>
-                                                </div>
-                                                <div class="card-body">
-                                                      <?php if ($message): ?>
-                                                            <div class="alert alert-success"><?php echo $message; ?></div>
-                                                      <?php endif; ?>
-                                                      <?php if ($error): ?>
-                                                            <div class="alert alert-danger"><?php echo $error; ?></div>
-                                                      <?php endif; ?>
+                  <div class="user-content">
+                        <div class="content-card">
+                              <div class="content-card-header">
+                                    <h1 class="content-card-title">
+                                          <i class="fas fa-cog"></i>
+                                          Account Settings
+                                    </h1>
+                              </div>
+                              <div class="content-card-body">
+                                    <?php if ($message): ?>
+                                          <div class="alert alert-success">
+                                                <i class="fas fa-check-circle me-2"></i>
+                                                <?php echo $message; ?>
+                                          </div>
+                                    <?php endif; ?>
+                                    <?php if ($error): ?>
+                                          <div class="alert alert-danger">
+                                                <i class="fas fa-exclamation-circle me-2"></i>
+                                                <?php echo $error; ?>
+                                          </div>
+                                    <?php endif; ?>
 
-                                                      <form method="POST">
-                                                            <div class="mb-3">
-                                                                  <label for="current_password" class="form-label">Current Password</label>
-                                                                  <input type="password" class="form-control" id="current_password" name="current_password" required>
+                                    <form method="POST" class="needs-validation" novalidate>
+                                          <div class="row">
+                                                <div class="col-md-6">
+                                                      <div class="mb-3">
+                                                            <label for="current_password" class="form-label">
+                                                                  <i class="fas fa-lock me-2"></i>Current Password
+                                                            </label>
+                                                            <input type="password" class="form-control" id="current_password" name="current_password" required>
+                                                            <div class="invalid-feedback">
+                                                                  Please enter your current password.
                                                             </div>
-                                                            <div class="mb-3">
-                                                                  <label for="new_password" class="form-label">New Password</label>
-                                                                  <input type="password" class="form-control" id="new_password" name="new_password" required>
-                                                                  <div class="form-text">Password must be at least 6 characters long</div>
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                  <label for="confirm_password" class="form-label">Confirm New Password</label>
-                                                                  <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
-                                                            </div>
-                                                            <button type="submit" class="btn btn-primary">
-                                                                  <i class="fas fa-save me-2"></i>Update Password
-                                                            </button>
-                                                      </form>
+                                                      </div>
                                                 </div>
                                           </div>
-                                    </div>
+
+                                          <div class="row">
+                                                <div class="col-md-6">
+                                                      <div class="mb-3">
+                                                            <label for="new_password" class="form-label">
+                                                                  <i class="fas fa-key me-2"></i>New Password
+                                                            </label>
+                                                            <input type="password" class="form-control" id="new_password" name="new_password" required>
+                                                            <div class="invalid-feedback">
+                                                                  Please enter a new password.
+                                                            </div>
+                                                      </div>
+                                                </div>
+                                          </div>
+
+                                          <div class="row">
+                                                <div class="col-md-6">
+                                                      <div class="mb-3">
+                                                            <label for="confirm_password" class="form-label">
+                                                                  <i class="fas fa-check-circle me-2"></i>Confirm New Password
+                                                            </label>
+                                                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                                                            <div class="invalid-feedback">
+                                                                  Please confirm your new password.
+                                                            </div>
+                                                      </div>
+                                                </div>
+                                          </div>
+
+                                          <div class="row">
+                                                <div class="col-md-6">
+                                                      <button type="submit" class="btn btn-modern btn-primary">
+                                                            <i class="fas fa-save me-2"></i>Update Password
+                                                      </button>
+                                                </div>
+                                          </div>
+                                    </form>
                               </div>
                         </div>
                   </div>
             </div>
       </div>
-      <!-- Bootstrap 5 JS -->
+
+      <!-- Bootstrap JS -->
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
       <!-- Custom JS -->
-      <script src="../admin/assets/js/admin.js"></script>
+      <script>
+            // Form validation
+            (function() {
+                  'use strict';
+                  window.addEventListener('load', function() {
+                        var forms = document.getElementsByClassName('needs-validation');
+                        var validation = Array.prototype.filter.call(forms, function(form) {
+                              form.addEventListener('submit', function(event) {
+                                    if (form.checkValidity() === false) {
+                                          event.preventDefault();
+                                          event.stopPropagation();
+                                    }
+                                    form.classList.add('was-validated');
+                              }, false);
+                        });
+                  }, false);
+            })();
+
+            // Sidebar toggle functionality
+            document.getElementById('sidebarToggleBtn').addEventListener('click', function() {
+                  const sidebar = document.getElementById('adminSidebar');
+                  const main = document.getElementById('userMain');
+
+                  sidebar.classList.toggle('collapsed');
+                  main.classList.toggle('sidebar-collapsed');
+            });
+
+            // Mobile sidebar toggle
+            if (window.innerWidth <= 768) {
+                  document.getElementById('sidebarToggleBtn').addEventListener('click', function() {
+                        const sidebar = document.getElementById('adminSidebar');
+                        sidebar.classList.toggle('show');
+                  });
+            }
+      </script>
 </body>
 
 </html>

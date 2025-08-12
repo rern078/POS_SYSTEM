@@ -1,6 +1,6 @@
 <!-- side.php: User Left Sidebar Navigation Include -->
 <!-- Sidebar -->
-<nav class="admin-sidebar" id="adminSidebar">
+<nav class="user-sidebar" id="adminSidebar">
       <div class="sidebar-header">
             <a class="sidebar-brand" href="index.php">
                   <div class="brand-icon">
@@ -11,9 +11,9 @@
                         <span class="brand-subtitle">User Panel</span>
                   </div>
             </a>
-            <!-- <button class="sidebar-toggle" id="sidebarToggle">
+            <button class="sidebar-toggle" id="sidebarToggle">
                   <i class="fas fa-bars"></i>
-            </button> -->
+            </button>
       </div>
 
       <div class="sidebar-content">
@@ -94,34 +94,13 @@
                                     <span>Settings</span>
                               </a>
                         </li>
+                        <li class="sidebar-nav-item">
+                              <a class="sidebar-nav-link" href="../logout.php">
+                                    <i class="fas fa-sign-out-alt"></i>
+                                    <span>Logout</span>
+                              </a>
+                        </li>
                   </ul>
-            </div>
-      </div>
-
-      <div class="sidebar-footer">
-            <div class="user-profile">
-                  <div class="user-avatar">
-                        <i class="fas fa-user-circle"></i>
-                  </div>
-                  <div class="user-info">
-                        <div class="user-name"><?php echo $_SESSION['username']; ?></div>
-                        <div class="user-role"><?php echo ucfirst($_SESSION['role']); ?></div>
-                  </div>
-                  <div class="user-menu">
-                        <div class="dropdown">
-                              <button class="btn btn-link dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fas fa-ellipsis-v"></i>
-                              </button>
-                              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                                    <li><a class="dropdown-item" href="profile.php"><i class="fas fa-user me-2"></i>Profile</a></li>
-                                    <li><a class="dropdown-item" href="settings.php"><i class="fas fa-cog me-2"></i>Settings</a></li>
-                                    <li>
-                                          <hr class="dropdown-divider">
-                                    </li>
-                                    <li><a class="dropdown-item" href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-                              </ul>
-                        </div>
-                  </div>
             </div>
       </div>
 </nav>

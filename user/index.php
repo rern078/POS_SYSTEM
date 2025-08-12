@@ -54,19 +54,19 @@ $stats['today_sales'] = $stmt->fetchColumn();
       <!-- Google Fonts -->
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
       <!-- Custom CSS -->
-      <link rel="stylesheet" href="../admin/assets/css/admin.css">
+      <link rel="stylesheet" href="../assets/css/user.css">
 </head>
 
 <body>
-      <div class="admin-layout">
+      <div class="user-layout">
             <?php include 'side.php'; ?>
 
             <!-- Main Content Wrapper -->
-            <div class="admin-main">
+            <div class="user-main" id="userMain">
                   <!-- Top Navigation Bar -->
-                  <nav class="admin-topbar">
+                  <nav class="user-topbar">
                         <div class="topbar-left">
-                              <button class="btn btn-link sidebar-toggle-btn" id="sidebarToggleBtn">
+                              <button class="sidebar-toggle-btn" id="sidebarToggleBtn">
                                     <i class="fas fa-bars"></i>
                               </button>
                               <div class="breadcrumb-container">
@@ -101,162 +101,116 @@ $stats['today_sales'] = $stmt->fetchColumn();
                   </nav>
 
                   <!-- Main Content Area -->
-                  <div class="admin-content">
-                        <!-- Page Header -->
-                        <div class="row mb-4">
-                              <div class="col-12">
-                                    <h1 class="h3 mb-0 text-gray-800">Welcome, <?php echo htmlspecialchars($user['username']); ?>!</h1>
-                                    <p class="text-muted">Role: <?php echo ucfirst($user['role']); ?> | Last login: <?php echo date('M d, Y H:i'); ?></p>
+                  <div class="user-content">
+                        <!-- Welcome Section -->
+                        <div class="content-card">
+                              <div class="content-card-header">
+                                    <h1 class="content-card-title">
+                                          <i class="fas fa-tachometer-alt"></i>
+                                          Welcome to Your Dashboard
+                                    </h1>
+                              </div>
+                              <div class="content-card-body">
+                                    <div class="row">
+                                          <div class="col-md-8">
+                                                <h4 class="mb-3">Hello, <?php echo htmlspecialchars($user['full_name'] ?: $user['username']); ?>!</h4>
+                                                <p class="text-muted mb-4">Welcome back to your POS system dashboard. Here's an overview of your business today.</p>
+
+                                                <div class="row g-3">
+                                                      <div class="col-md-6">
+                                                            <a href="pos.php" class="btn btn-modern btn-primary w-100">
+                                                                  <i class="fas fa-cash-register"></i>
+                                                                  Start New Sale
+                                                            </a>
+                                                      </div>
+                                                      <div class="col-md-6">
+                                                            <a href="products.php" class="btn btn-modern btn-outline-primary w-100">
+                                                                  <i class="fas fa-box"></i>
+                                                                  Manage Products
+                                                            </a>
+                                                      </div>
+                                                </div>
+                                          </div>
+                                          <div class="col-md-4 text-center">
+                                                <div class="stats-card">
+                                                      <div class="stats-icon" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));">
+                                                            <i class="fas fa-user"></i>
+                                                      </div>
+                                                      <div class="stats-number"><?php echo ucfirst($user['role']); ?></div>
+                                                      <div class="stats-label">User Role</div>
+                                                </div>
+                                          </div>
+                                    </div>
                               </div>
                         </div>
 
-                        <!-- Statistics Cards -->
-                        <div class="row mb-4">
-                              <div class="col-xl-3 col-md-6 mb-4">
-                                    <div class="stat-card success">
-                                          <div class="stat-card-header">
-                                                <div class="stat-card-title">Today's Sales</div>
-                                                <div class="stat-card-icon">
-                                                      <i class="fas fa-dollar-sign"></i>
-                                                </div>
+                        <!-- Stats Cards -->
+                        <div class="row g-4 mb-4">
+                              <div class="col-xl-3 col-md-6">
+                                    <div class="stats-card">
+                                          <div class="stats-icon" style="background: linear-gradient(135deg, var(--success-color), #28a745);">
+                                                <i class="fas fa-box"></i>
                                           </div>
-                                          <div class="stat-card-value">
-                                                <?php
-                                                $exchangeRate = new ExchangeRate();
-                                                $defaultCurrency = $exchangeRate->getDefaultCurrency();
-                                                $symbol = $defaultCurrency['symbol'] ?? '$';
-                                                echo $symbol . number_format($stats['today_sales'], 2);
-                                                ?>
-                                          </div>
+                                          <div class="stats-number"><?php echo number_format($stats['total_products']); ?></div>
+                                          <div class="stats-label">Total Products</div>
                                     </div>
                               </div>
-
-                              <div class="col-xl-3 col-md-6 mb-4">
-                                    <div class="stat-card info">
-                                          <div class="stat-card-header">
-                                                <div class="stat-card-title">Today's Orders</div>
-                                                <div class="stat-card-icon">
-                                                      <i class="fas fa-shopping-cart"></i>
-                                                </div>
+                              <div class="col-xl-3 col-md-6">
+                                    <div class="stats-card">
+                                          <div class="stats-icon" style="background: linear-gradient(135deg, var(--warning-color), #fd7e14);">
+                                                <i class="fas fa-exclamation-triangle"></i>
                                           </div>
-                                          <div class="stat-card-value"><?php echo $stats['today_orders']; ?></div>
+                                          <div class="stats-number"><?php echo number_format($stats['low_stock_items']); ?></div>
+                                          <div class="stats-label">Low Stock Items</div>
                                     </div>
                               </div>
-
-                              <div class="col-xl-3 col-md-6 mb-4">
-                                    <div class="stat-card warning">
-                                          <div class="stat-card-header">
-                                                <div class="stat-card-title">Total Products</div>
-                                                <div class="stat-card-icon">
-                                                      <i class="fas fa-box"></i>
-                                                </div>
+                              <div class="col-xl-3 col-md-6">
+                                    <div class="stats-card">
+                                          <div class="stats-icon" style="background: linear-gradient(135deg, var(--info-color), #17a2b8);">
+                                                <i class="fas fa-shopping-cart"></i>
                                           </div>
-                                          <div class="stat-card-value"><?php echo $stats['total_products']; ?></div>
+                                          <div class="stats-number"><?php echo number_format($stats['today_orders']); ?></div>
+                                          <div class="stats-label">Today's Orders</div>
                                     </div>
                               </div>
-
-                              <div class="col-xl-3 col-md-6 mb-4">
-                                    <div class="stat-card danger">
-                                          <div class="stat-card-header">
-                                                <div class="stat-card-title">Low Stock Items</div>
-                                                <div class="stat-card-icon">
-                                                      <i class="fas fa-exclamation-triangle"></i>
-                                                </div>
+                              <div class="col-xl-3 col-md-6">
+                                    <div class="stats-card">
+                                          <div class="stats-icon" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));">
+                                                <i class="fas fa-dollar-sign"></i>
                                           </div>
-                                          <div class="stat-card-value"><?php echo $stats['low_stock_items']; ?></div>
+                                          <div class="stats-number">$<?php echo number_format($stats['today_sales'], 2); ?></div>
+                                          <div class="stats-label">Today's Sales</div>
                                     </div>
                               </div>
                         </div>
 
                         <!-- Quick Actions -->
-                        <div class="row">
-                              <div class="col-lg-8">
-                                    <div class="content-card">
-                                          <div class="content-card-header">
-                                                <h5 class="content-card-title">Quick Actions</h5>
-                                          </div>
-                                          <div class="content-card-body">
-                                                <div class="row">
-                                                      <div class="col-md-6 mb-3">
-                                                            <a href="pos.php" class="btn btn-primary btn-lg w-100 h-100 d-flex flex-column align-items-center justify-content-center">
-                                                                  <i class="fas fa-cash-register fa-3x mb-3"></i>
-                                                                  <span>Start New Sale</span>
-                                                            </a>
-                                                      </div>
-                                                      <div class="col-md-6 mb-3">
-                                                            <a href="products.php" class="btn btn-info btn-lg w-100 h-100 d-flex flex-column align-items-center justify-content-center">
-                                                                  <i class="fas fa-box fa-3x mb-3"></i>
-                                                                  <span>View Products</span>
-                                                            </a>
-                                                      </div>
-                                                      <div class="col-md-6 mb-3">
-                                                            <a href="orders.php" class="btn btn-success btn-lg w-100 h-100 d-flex flex-column align-items-center justify-content-center">
-                                                                  <i class="fas fa-shopping-cart fa-3x mb-3"></i>
-                                                                  <span>View Orders</span>
-                                                            </a>
-                                                      </div>
-                                                      <?php if (isManager()): ?>
-                                                            <div class="col-md-6 mb-3">
-                                                                  <a href="reports.php" class="btn btn-warning btn-lg w-100 h-100 d-flex flex-column align-items-center justify-content-center">
-                                                                        <i class="fas fa-chart-bar fa-3x mb-3"></i>
-                                                                        <span>View Reports</span>
-                                                                  </a>
-                                                            </div>
-                                                      <?php else: ?>
-                                                            <div class="col-md-6 mb-3">
-                                                                  <a href="profile.php" class="btn btn-secondary btn-lg w-100 h-100 d-flex flex-column align-items-center justify-content-center">
-                                                                        <i class="fas fa-user fa-3x mb-3"></i>
-                                                                        <span>My Profile</span>
-                                                                  </a>
-                                                            </div>
-                                                      <?php endif; ?>
-                                                </div>
-                                          </div>
-                                    </div>
+                        <div class="content-card">
+                              <div class="content-card-header">
+                                    <h2 class="content-card-title">
+                                          <i class="fas fa-bolt"></i>
+                                          Quick Actions
+                                    </h2>
                               </div>
-
-                              <div class="col-lg-4">
-                                    <div class="content-card">
-                                          <div class="content-card-header">
-                                                <h5 class="content-card-title">Recent Activity</h5>
+                              <div class="content-card-body">
+                                    <div class="row g-3">
+                                          <div class="col-md-4">
+                                                <a href="pos.php" class="btn btn-modern btn-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center p-4">
+                                                      <i class="fas fa-cash-register fa-2x mb-2"></i>
+                                                      <span>New Sale</span>
+                                                </a>
                                           </div>
-                                          <div class="content-card-body">
-                                                <div class="list-group list-group-flush">
-                                                      <div class="list-group-item d-flex justify-content-between align-items-center">
-                                                            <div>
-                                                                  <i class="fas fa-sign-in-alt text-success me-2"></i>
-                                                                  <small>Logged in</small>
-                                                            </div>
-                                                            <small class="text-muted"><?php echo date('H:i'); ?></small>
-                                                      </div>
-                                                      <div class="list-group-item d-flex justify-content-between align-items-center">
-                                                            <div>
-                                                                  <i class="fas fa-user text-info me-2"></i>
-                                                                  <small>Profile accessed</small>
-                                                            </div>
-                                                            <small class="text-muted">Today</small>
-                                                      </div>
-                                                </div>
+                                          <div class="col-md-4">
+                                                <a href="products.php" class="btn btn-modern btn-outline-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center p-4">
+                                                      <i class="fas fa-box fa-2x mb-2"></i>
+                                                      <span>Products</span>
+                                                </a>
                                           </div>
-                                    </div>
-
-                                    <div class="content-card">
-                                          <div class="content-card-header">
-                                                <h5 class="content-card-title">System Status</h5>
-                                          </div>
-                                          <div class="content-card-body">
-                                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                                      <span>Database</span>
-                                                      <span class="badge bg-success">Online</span>
-                                                </div>
-                                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                                      <span>Session</span>
-                                                      <span class="badge bg-success">Active</span>
-                                                </div>
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                      <span>Role</span>
-                                                      <span class="badge bg-primary"><?php echo ucfirst($_SESSION['role']); ?></span>
-                                                </div>
+                                          <div class="col-md-4">
+                                                <a href="orders.php" class="btn btn-modern btn-outline-secondary w-100 h-100 d-flex flex-column align-items-center justify-content-center p-4">
+                                                      <i class="fas fa-shopping-cart fa-2x mb-2"></i>
+                                                      <span>Orders</span>
+                                                </a>
                                           </div>
                                     </div>
                               </div>
@@ -265,10 +219,28 @@ $stats['today_sales'] = $stmt->fetchColumn();
             </div>
       </div>
 
-      <!-- Bootstrap 5 JS -->
+      <!-- Bootstrap JS -->
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
       <!-- Custom JS -->
-      <script src="../admin/assets/js/admin.js"></script>
+      <script>
+            // Sidebar toggle functionality
+            document.getElementById('sidebarToggleBtn').addEventListener('click', function() {
+                  const sidebar = document.getElementById('adminSidebar');
+                  const main = document.getElementById('userMain');
+
+                  sidebar.classList.toggle('collapsed');
+                  main.classList.toggle('sidebar-collapsed');
+            });
+
+            // Mobile sidebar toggle
+            if (window.innerWidth <= 768) {
+                  document.getElementById('sidebarToggleBtn').addEventListener('click', function() {
+                        const sidebar = document.getElementById('adminSidebar');
+                        sidebar.classList.toggle('show');
+                  });
+            }
+      </script>
 </body>
 
 </html>
