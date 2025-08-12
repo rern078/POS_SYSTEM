@@ -409,17 +409,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                               <?php endif; ?>
                               <?php if (!isset($_SESSION['user_id'])): ?>
                                     <li class="nav-item dropdown">
-                                          <a class="nav-link btn btn-primary btn-custom ms-2 dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                          <a class="nav-link btn btn-primary btn-custom ms-2" href="register.php">
                                                 <i class="fas fa-user-plus me-2"></i>Register
                                           </a>
-                                          <ul class="dropdown-menu">
+                                          <!-- <a class="nav-link btn btn-primary btn-custom ms-2 dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                                <i class="fas fa-user-plus me-2"></i>Register
+                                          </a> -->
+                                          <!-- <ul class="dropdown-menu">
                                                 <li><a class="dropdown-item" href="customer_register.php">
                                                             <i class="fas fa-user me-2"></i>Customer Account
                                                       </a></li>
-                                                <li><a class="dropdown-item" href="register.php">
+                                                <li>
+                                                      <a class="dropdown-item" href="register.php">
                                                             <i class="fas fa-user-tie me-2"></i>Staff Account
-                                                      </a></li>
-                                          </ul>
+                                                      </a>
+                                                </li>
+                                          </ul> -->
                                     </li>
                               <?php endif; ?>
                         </ul>

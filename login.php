@@ -162,14 +162,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                                   </a>
                                                             </div>
                                                       </div>
-
-                                                      <div class="login-credentials">
+                                                      <!-- <div class="login-credentials">
                                                             <small>
                                                                   <strong>Default Admin Credentials:</strong><br>
                                                                   Username: admin<br>
                                                                   Password: admin123
                                                             </small>
-                                                      </div>
+                                                      </div> -->
                                                 </div>
                                           </div>
                                     </div>

@@ -11,9 +11,9 @@
                         <span class="brand-subtitle">User Panel</span>
                   </div>
             </a>
-            <button class="sidebar-toggle" id="sidebarToggle">
+            <!-- <button class="sidebar-toggle" id="sidebarToggle">
                   <i class="fas fa-bars"></i>
-            </button>
+            </button> -->
       </div>
 
       <div class="sidebar-content">
