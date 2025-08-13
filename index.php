@@ -106,6 +106,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                   echo json_encode(['success' => true, 'total' => $total]);
                   exit;
 
+            case 'get_product_details':
+                  $product_id = $_POST['product_id'];
+
+                  $pdo = getDBConnection();
+                  $stmt = $pdo->prepare("SELECT * FROM products WHERE id = ?");
+                  $stmt->execute([$product_id]);
+                  $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                  if ($product) {
+                        $display_price = $product['discount_price'] ? $product['discount_price'] : $product['price'];
+                        $has_discount = $product['discount_price'] && $product['discount_price'] < $product['price'];
+                        $discount_percent = 0;
+
+                        if ($has_discount) {
+                              $discount_percent = round((($product['price'] - $product['discount_price']) / $product['price']) * 100);
+                        }
+
+                        $product_data = [
+                              'id' => $product['id'],
+                              'name' => $product['name'],
+                              'description' => $product['description'],
+                              'price' => $product['price'],
+                              'discount_price' => $product['discount_price'],
+                              'display_price' => $display_price,
+                              'has_discount' => $has_discount,
+                              'discount_percent' => $discount_percent,
+                              'stock_quantity' => $product['stock_quantity'],
+                              'category' => $product['category'] ?? 'Uncategorized',
+                              'image_path' => $product['image_path'] ?: 'images/placeholder.jpg',
+                              'product_code' => $product['product_code'] ?? '',
+                              'barcode' => $product['barcode'] ?? ''
+                        ];
+
+                        echo json_encode(['success' => true, 'product' => $product_data]);
+                  } else {
+                        echo json_encode(['success' => false, 'message' => 'Product not found']);
+                  }
+                  exit;
+
             case 'process_guest_payment':
                   if (empty($_SESSION['guest_cart'])) {
                         echo json_encode(['success' => false, 'message' => 'Cart is empty']);
@@ -308,6 +347,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
       <!-- Cart CSS -->
       <link rel="stylesheet" href="assets/css/cart.css">
+
+      <!-- Custom Styles for Product Detail Modal -->
+      
 </head>
 
 <body>
@@ -643,9 +685,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                                       </button>
                                                 </div>
                                           </div>
-                                          <button class="add-to-cart-btn" onclick="event.stopPropagation(); showQuantityOverlay(<?php echo $product['id']; ?>)">
-                                                <i class="fas fa-plus"></i>
-                                          </button>
+                                          <div class="product-actions">
+                                                <button class="add-to-cart-btn" onclick="event.stopPropagation(); showQuantityOverlay(<?php echo $product['id']; ?>)">
+                                                      <i class="fas fa-plus"></i>
+                                                </button>
+                                                <button class="view-details-btn" onclick="event.stopPropagation(); showProductDetailModal(<?php echo $product['id']; ?>)">
+                                                      <i class="fas fa-info-circle"></i>
+                                                </button>
+                                          </div>
                                           <div class="product-card-click-area" onclick="handleProductCardClick(<?php echo $product['id']; ?>)">
                                                 <div class="product-image-container">
                                                       <img src="<?php echo $img_path; ?>"
@@ -1070,6 +1117,90 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             </div>
       </div>
 
+      <!-- Product Detail Modal -->
+      <div class="modal fade" id="productDetailModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                  <div class="modal-content">
+                        <div class="modal-header">
+                              <h5 class="modal-title">
+                                    <i class="fas fa-info-circle me-2"></i>Product Details
+                              </h5>
+                              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                              <div class="row">
+                                    <div class="col-md-6">
+                                          <div class="product-image-container mb-3">
+                                                <img id="modal-product-image" src="" alt="Product Image" class="img-fluid rounded" style="max-height: 300px; width: 100%; object-fit: cover;">
+                                                <div id="modal-discount-badge" class="discount-badge" style="display: none;">
+                                                      <span class="badge bg-danger fs-6">
+                                                            <span id="modal-discount-percent"></span> OFF
+                                                      </span>
+                                                </div>
+                                          </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                          <h4 id="modal-product-name" class="mb-3"></h4>
+                                          <p id="modal-product-description" class="text-muted mb-3"></p>
+
+                                          <div class="product-info mb-3">
+                                                <div class="row">
+                                                      <div class="col-6">
+                                                            <strong>Category:</strong>
+                                                            <span id="modal-product-category" class="ms-2"></span>
+                                                      </div>
+                                                      <div class="col-6">
+                                                            <strong>Stock:</strong>
+                                                            <span id="modal-product-stock" class="ms-2"></span>
+                                                      </div>
+                                                </div>
+                                                <div class="row mt-2">
+                                                      <div class="col-6">
+                                                            <strong>Product Code:</strong>
+                                                            <span id="modal-product-code" class="ms-2"></span>
+                                                      </div>
+                                                      <div class="col-6">
+                                                            <strong>Barcode:</strong>
+                                                            <span id="modal-product-barcode" class="ms-2"></span>
+                                                      </div>
+                                                </div>
+                                          </div>
+
+                                          <div class="price-section mb-4">
+                                                <div class="price-container">
+                                                      <span id="modal-original-price" class="original-price text-muted text-decoration-line-through" style="display: none;"></span>
+                                                      <span id="modal-current-price" class="current-price fw-bold text-primary fs-4"></span>
+                                                </div>
+                                          </div>
+
+                                          <div class="quantity-section mb-4">
+                                                <label class="form-label"><strong>Quantity:</strong></label>
+                                                <div class="d-flex align-items-center">
+                                                      <button class="btn btn-outline-secondary" onclick="updateModalQuantity(-1)">
+                                                            <i class="fas fa-minus"></i>
+                                                      </button>
+                                                      <input type="number" id="modal-quantity" class="form-control mx-2" value="1" min="1" style="width: 80px; text-align: center;">
+                                                      <button class="btn btn-outline-secondary" onclick="updateModalQuantity(1)">
+                                                            <i class="fas fa-plus"></i>
+                                                      </button>
+                                                </div>
+                                          </div>
+
+                                          <div class="action-buttons">
+                                                <button type="button" class="btn btn-success btn-lg me-2" onclick="addToCartFromModal()">
+                                                      <i class="fas fa-cart-plus me-2"></i>Add to Cart
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                                      <i class="fas fa-times me-2"></i>Close
+                                                </button>
+                                          </div>
+                                    </div>
+                              </div>
+                        </div>
+                  </div>
+            </div>
+      </div>
+
       <!-- Bootstrap 5 JS -->
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -1116,8 +1247,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         return; // Don't do anything if overlay is already visible
                   }
 
-                  // Show quantity overlay when card is clicked
-                  showQuantityOverlay(productId);
+                  // Show product detail modal instead of quantity overlay
+                  showProductDetailModal(productId);
             }
 
             function addToGuestCart(productId) {
@@ -1794,6 +1925,128 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
 
             // Function removed - no longer needed since we use span instead of input
+
+            // Product Detail Modal Functions
+            let currentProductId = null;
+
+            function showProductDetailModal(productId) {
+                  currentProductId = productId;
+
+                  // Fetch product details
+                  fetch('index.php', {
+                              method: 'POST',
+                              headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded'
+                              },
+                              body: `action=get_product_details&product_id=${productId}`
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                              if (data.success) {
+                                    populateProductModal(data.product);
+                                    const modal = new bootstrap.Modal(document.getElementById('productDetailModal'));
+                                    modal.show();
+                              } else {
+                                    showNotification(data.message, 'error');
+                              }
+                        })
+                        .catch(error => {
+                              console.error('Error fetching product details:', error);
+                              showNotification('Error loading product details', 'error');
+                        });
+            }
+
+            function populateProductModal(product) {
+                  // Set product image
+                  document.getElementById('modal-product-image').src = product.image_path;
+                  document.getElementById('modal-product-image').alt = product.name;
+
+                  // Set product name and description
+                  document.getElementById('modal-product-name').textContent = product.name;
+                  document.getElementById('modal-product-description').textContent = product.description;
+
+                  // Set product info
+                  document.getElementById('modal-product-category').textContent = product.category;
+                  document.getElementById('modal-product-stock').textContent = product.stock_quantity;
+                  document.getElementById('modal-product-code').textContent = product.product_code || 'N/A';
+                  document.getElementById('modal-product-barcode').textContent = product.barcode || 'N/A';
+
+                  // Set prices
+                  const currentPriceElement = document.getElementById('modal-current-price');
+                  const originalPriceElement = document.getElementById('modal-original-price');
+                  const discountBadge = document.getElementById('modal-discount-badge');
+                  const discountPercent = document.getElementById('modal-discount-percent');
+
+                  currentPriceElement.textContent = `$${parseFloat(product.display_price).toFixed(2)}`;
+
+                  if (product.has_discount) {
+                        originalPriceElement.textContent = `$${parseFloat(product.price).toFixed(2)}`;
+                        originalPriceElement.style.display = 'block';
+                        discountBadge.style.display = 'block';
+                        discountPercent.textContent = `${product.discount_percent}%`;
+                  } else {
+                        originalPriceElement.style.display = 'none';
+                        discountBadge.style.display = 'none';
+                  }
+
+                  // Reset quantity to 1
+                  document.getElementById('modal-quantity').value = 1;
+            }
+
+            function updateModalQuantity(change) {
+                  const quantityInput = document.getElementById('modal-quantity');
+                  let currentQuantity = parseInt(quantityInput.value);
+                  let newQuantity = currentQuantity + change;
+
+                  // Ensure quantity doesn't go below 1
+                  if (newQuantity < 1) {
+                        newQuantity = 1;
+                  }
+
+                  quantityInput.value = newQuantity;
+            }
+
+            function addToCartFromModal() {
+                  if (!currentProductId) return;
+
+                  const quantity = parseInt(document.getElementById('modal-quantity').value);
+
+                  fetch('index.php', {
+                              method: 'POST',
+                              headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded'
+                              },
+                              body: `action=add_to_cart&product_id=${currentProductId}&quantity=${quantity}`
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                              if (data.success) {
+                                    showNotification(`${quantity} item(s) added to cart!`, 'success');
+                                    updateCartBadge();
+                                    fetchGuestCart();
+
+                                    // Close the modal
+                                    const modal = bootstrap.Modal.getInstance(document.getElementById('productDetailModal'));
+                                    modal.hide();
+                              } else {
+                                    showNotification(data.message, 'error');
+                              }
+                        })
+                        .catch(error => {
+                              showNotification('Error adding product to cart', 'error');
+                        });
+            }
+
+            // Add keyboard support for modal quantity
+            document.addEventListener('keydown', function(e) {
+                  if (e.key === 'Escape') {
+                        // Close product detail modal when Escape is pressed
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('productDetailModal'));
+                        if (modal) {
+                              modal.hide();
+                        }
+                  }
+            });
       </script>
 </body>
 
