@@ -134,9 +134,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                               'discount_percent' => $discount_percent,
                               'stock_quantity' => $product['stock_quantity'],
                               'category' => $product['category'] ?? 'Uncategorized',
+                              'type' => $product['type'] ?? 'Food',
                               'image_path' => $product['image_path'] ?: 'images/placeholder.jpg',
                               'product_code' => $product['product_code'] ?? '',
-                              'barcode' => $product['barcode'] ?? ''
+                              'barcode' => $product['barcode'] ?? '',
+                              'size' => $product['size'] ?? null,
+                              'color' => $product['color'] ?? null,
+                              'material' => $product['material'] ?? null,
+                              'weight' => $product['weight'] ?? null
                         ];
 
                         echo json_encode(['success' => true, 'product' => $product_data]);
@@ -349,6 +354,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
       <link rel="stylesheet" href="assets/css/cart.css">
 
       <!-- Custom Styles for Product Detail Modal -->
+      <style>
+            /* Category Filter Buttons Styling */
+            .category-filter-buttons {
+                  display: flex;
+                  flex-wrap: wrap;
+                  justify-content: center;
+                  gap: 0.5rem;
+            }
+
+            .category-filter-buttons .btn {
+                  transition: all 0.3s ease;
+                  border-radius: 25px;
+                  font-weight: 500;
+                  text-transform: uppercase;
+                  font-size: 0.8rem;
+                  letter-spacing: 0.5px;
+            }
+
+            .category-filter-buttons .btn:hover {
+                  transform: translateY(-2px);
+                  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            }
+
+            .category-filter-buttons .btn:active {
+                  transform: translateY(0);
+            }
+
+            /* Active filter button styling */
+            .category-filter-buttons .btn.active {
+                  transform: translateY(-2px);
+                  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            }
+
+            /* Responsive adjustments */
+            @media (max-width: 768px) {
+                  .category-filter-buttons {
+                        flex-direction: column;
+                        align-items: center;
+                  }
+
+                  .category-filter-buttons .btn {
+                        width: 200px;
+                        margin-bottom: 0.5rem;
+                  }
+            }
+      </style>
 
 </head>
 
@@ -414,23 +465,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                           <li>
                                                 <hr class="dropdown-divider">
                                           </li>
-                                          <li><a class="dropdown-item" href="#products" onclick="filterByCategory('Food')">
+                                          <li><a class="dropdown-item" href="product-list.php?category=Food">
                                                       <i class="fas fa-utensils me-2"></i>Food
                                                 </a></li>
-                                          <li><a class="dropdown-item" href="#products" onclick="filterByCategory('Cloth')">
-                                                      <i class="fas fa-tshirt me-2"></i>Cloth
-                                                </a></li>
-                                          <li><a class="dropdown-item" href="#products" onclick="filterByCategory('Electronics')">
-                                                      <i class="fas fa-laptop me-2"></i>Electronics
-                                                </a></li>
-                                          <li><a class="dropdown-item" href="#products" onclick="filterByCategory('Beverages')">
-                                                      <i class="fas fa-coffee me-2"></i>Beverages
-                                                </a></li>
-                                          <li><a class="dropdown-item" href="#products" onclick="filterByCategory('Snacks')">
-                                                      <i class="fas fa-cookie-bite me-2"></i>Snacks
-                                                </a></li>
-                                          <li><a class="dropdown-item" href="#products" onclick="filterByCategory('Household')">
-                                                      <i class="fas fa-home me-2"></i>Household
+                                          <li class="dropdown-divider"></li>
+                                          <li><a class="dropdown-item" href="product-list.php?category=Clothes">
+                                                      <i class="fas fa-tshirt me-2"></i>All Clothing
                                                 </a></li>
                                     </ul>
                               </li>
@@ -683,11 +723,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         </div>
                   </div>
 
+                  <!-- Category Filter Buttons -->
+                  <div class="row mb-4">
+                        <div class="col-12 text-center">
+                              <div class="category-filter-buttons">
+                                    <button class="btn btn-outline-primary btn-sm me-2 mb-2" onclick="filterByCategory('All Products')">
+                                          <i class="fas fa-th-large me-1"></i>All Products
+                                    </button>
+                                    <button class="btn btn-outline-success btn-sm me-2 mb-2" onclick="filterByCategory('Food')">
+                                          <i class="fas fa-utensils me-1"></i>Food
+                                    </button>
+                                    <button class="btn btn-outline-info btn-sm me-2 mb-2" onclick="filterByCategory('Clothes')">
+                                          <i class="fas fa-tshirt me-1"></i>All Clothing
+                                    </button>
+                                    <button class="btn btn-outline-warning btn-sm me-2 mb-2" onclick="filterByCategory('Apparel')">
+                                          <i class="fas fa-tshirt me-1"></i>Apparel
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm me-2 mb-2" onclick="filterByCategory('Clothing')">
+                                          <i class="fas fa-tshirt me-1"></i>Clothing
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm me-2 mb-2" onclick="filterByCategory('Fashion')">
+                                          <i class="fas fa-tshirt me-1"></i>Fashion
+                                    </button>
+                                    <button class="btn btn-outline-dark btn-sm me-2 mb-2" onclick="filterByCategory('Sports Wear')">
+                                          <i class="fas fa-running me-1"></i>Sports Wear
+                                    </button>
+                                    <button class="btn btn-outline-primary btn-sm me-2 mb-2" onclick="filterByCategory('Uniforms')">
+                                          <i class="fas fa-user-tie me-1"></i>Uniforms
+                                    </button>
+                              </div>
+                        </div>
+                  </div>
+
                   <div class="row g-4">
                         <?php
                         // Get featured products from database
                         $pdo = getDBConnection();
-                        $stmt = $pdo->prepare("SELECT * FROM products WHERE stock_quantity > 0 ORDER BY RAND() LIMIT 8");
+                        $stmt = $pdo->prepare("SELECT *, COALESCE(type, 'Food') as type FROM products WHERE stock_quantity > 0 ORDER BY RAND() LIMIT 8");
                         $stmt->execute();
                         $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -761,7 +833,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                                                   <span class="badge bg-light text-dark">
                                                                         <?php echo htmlspecialchars($product['category'] ?? 'Uncategorized'); ?>
                                                                   </span>
+                                                                  <?php if (isset($product['type'])): ?>
+                                                                        <span class="badge bg-info text-white ms-1">
+                                                                              <?php echo htmlspecialchars($product['type']); ?>
+                                                                        </span>
+                                                                  <?php endif; ?>
                                                             </div>
+                                                            <?php if (isset($product['type']) && $product['type'] === 'Clothes'): ?>
+                                                                  <div class="clothing-attributes mt-2">
+                                                                        <?php if (!empty($product['size'])): ?>
+                                                                              <span class="badge bg-warning text-dark me-1">
+                                                                                    <i class="fas fa-ruler me-1"></i><?php echo htmlspecialchars($product['size']); ?>
+                                                                              </span>
+                                                                        <?php endif; ?>
+                                                                        <?php if (!empty($product['color'])): ?>
+                                                                              <span class="badge bg-success text-white me-1">
+                                                                                    <i class="fas fa-palette me-1"></i><?php echo htmlspecialchars($product['color']); ?>
+                                                                              </span>
+                                                                        <?php endif; ?>
+                                                                        <?php if (!empty($product['material'])): ?>
+                                                                              <span class="badge bg-secondary text-white me-1">
+                                                                                    <i class="fas fa-tshirt me-1"></i><?php echo htmlspecialchars($product['material']); ?>
+                                                                              </span>
+                                                                        <?php endif; ?>
+                                                                  </div>
+                                                            <?php endif; ?>
                                                       </div>
                                                 </div>
                                           </div>
@@ -1190,6 +1286,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                                       <div class="col-6">
                                                             <strong>Barcode:</strong>
                                                             <span id="modal-product-barcode" class="ms-2"></span>
+                                                      </div>
+                                                </div>
+                                                <!-- Clothing-specific attributes -->
+                                                <div id="modal-clothing-attributes" class="row mt-2" style="display: none;">
+                                                      <div class="col-12">
+                                                            <strong>Clothing Details:</strong>
+                                                            <div class="mt-2">
+                                                                  <span id="modal-product-size" class="badge bg-warning text-dark me-2" style="display: none;">
+                                                                        <i class="fas fa-ruler me-1"></i>Size: <span class="size-value"></span>
+                                                                  </span>
+                                                                  <span id="modal-product-color" class="badge bg-success text-white me-2" style="display: none;">
+                                                                        <i class="fas fa-palette me-1"></i>Color: <span class="color-value"></span>
+                                                                  </span>
+                                                                  <span id="modal-product-material" class="badge bg-secondary text-white me-2" style="display: none;">
+                                                                        <i class="fas fa-tshirt me-1"></i>Material: <span class="material-value"></span>
+                                                                  </span>
+                                                                  <span id="modal-product-weight" class="badge bg-info text-white me-2" style="display: none;">
+                                                                        <i class="fas fa-weight-hanging me-1"></i>Weight: <span class="weight-value"></span>g
+                                                                  </span>
+                                                            </div>
                                                       </div>
                                                 </div>
                                           </div>
@@ -2017,6 +2133,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         discountBadge.style.display = 'none';
                   }
 
+                  // Handle clothing-specific attributes
+                  const clothingAttributes = document.getElementById('modal-clothing-attributes');
+                  const sizeBadge = document.getElementById('modal-product-size');
+                  const colorBadge = document.getElementById('modal-product-color');
+                  const materialBadge = document.getElementById('modal-product-material');
+                  const weightBadge = document.getElementById('modal-product-weight');
+
+                  if (product.type === 'Clothes') {
+                        clothingAttributes.style.display = 'block';
+
+                        // Show size if available
+                        if (product.size) {
+                              sizeBadge.style.display = 'inline-block';
+                              sizeBadge.querySelector('.size-value').textContent = product.size;
+                        } else {
+                              sizeBadge.style.display = 'none';
+                        }
+
+                        // Show color if available
+                        if (product.color) {
+                              colorBadge.style.display = 'inline-block';
+                              colorBadge.querySelector('.color-value').textContent = product.color;
+                        } else {
+                              colorBadge.style.display = 'none';
+                        }
+
+                        // Show material if available
+                        if (product.material) {
+                              materialBadge.style.display = 'inline-block';
+                              materialBadge.querySelector('.material-value').textContent = product.material;
+                        } else {
+                              materialBadge.style.display = 'none';
+                        }
+
+                        // Show weight if available
+                        if (product.weight) {
+                              weightBadge.style.display = 'inline-block';
+                              weightBadge.querySelector('.weight-value').textContent = product.weight;
+                        } else {
+                              weightBadge.style.display = 'none';
+                        }
+                  } else {
+                        clothingAttributes.style.display = 'none';
+                  }
+
                   // Reset quantity to 1
                   document.getElementById('modal-quantity').value = 1;
             }
@@ -2083,25 +2244,94 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         behavior: 'smooth'
                   });
 
+                  // Update active button state
+                  updateActiveFilterButton(category);
+
                   // Add a small delay to ensure the section is visible
                   setTimeout(() => {
                         const productContainers = document.querySelectorAll('.product-item-container');
 
                         productContainers.forEach(container => {
-                              const categoryBadge = container.querySelector('.category-badge .badge');
-                              const productCategory = categoryBadge ? categoryBadge.textContent.trim() : '';
+                              const categoryBadges = container.querySelectorAll('.category-badge .badge');
+                              let shouldShow = false;
 
-                              if (category === 'All Products' || productCategory === category) {
-                                    container.style.display = 'block';
+                              if (category === 'All Products') {
+                                    shouldShow = true;
+                              } else if (category === 'Clothes') {
+                                    // For Clothes filter, check if any badge contains "Clothes" (type badge)
+                                    categoryBadges.forEach(badge => {
+                                          const badgeText = badge.textContent.trim();
+                                          if (badgeText === 'Clothes') {
+                                                shouldShow = true;
+                                          }
+                                    });
+                              } else if (category === 'Food') {
+                                    // For Food filter, check if any badge contains "Food" (type badge)
+                                    categoryBadges.forEach(badge => {
+                                          const badgeText = badge.textContent.trim();
+                                          if (badgeText === 'Food') {
+                                                shouldShow = true;
+                                          }
+                                    });
                               } else {
-                                    container.style.display = 'none';
+                                    // For specific categories, check category badges
+                                    categoryBadges.forEach(badge => {
+                                          const badgeText = badge.textContent.trim();
+                                          if (badgeText === category) {
+                                                shouldShow = true;
+                                          }
+                                    });
                               }
+
+                              container.style.display = shouldShow ? 'block' : 'none';
                         });
 
                         // Show notification
                         const categoryName = category === 'All Products' ? 'All Products' : category;
                         showNotification(`Showing ${categoryName}`, 'info');
                   }, 500);
+            }
+
+            // Function to update active filter button
+            function updateActiveFilterButton(activeCategory) {
+                  // Remove active class from all filter buttons
+                  const allButtons = document.querySelectorAll('.category-filter-buttons .btn');
+                  allButtons.forEach(btn => {
+                        btn.classList.remove('active');
+                        // Reset button styles
+                        btn.classList.remove('btn-primary', 'btn-success', 'btn-info', 'btn-warning', 'btn-secondary', 'btn-danger', 'btn-dark');
+                        btn.classList.add('btn-outline-primary', 'btn-outline-success', 'btn-outline-info', 'btn-outline-warning', 'btn-outline-secondary', 'btn-outline-danger', 'btn-outline-dark');
+                  });
+
+                  // Add active class to the clicked button
+                  const activeButton = document.querySelector(`.category-filter-buttons .btn[onclick*="${activeCategory}"]`);
+                  if (activeButton) {
+                        activeButton.classList.add('active');
+                        // Change button style to solid
+                        const currentClasses = activeButton.className;
+                        if (currentClasses.includes('btn-outline-primary')) {
+                              activeButton.classList.remove('btn-outline-primary');
+                              activeButton.classList.add('btn-primary');
+                        } else if (currentClasses.includes('btn-outline-success')) {
+                              activeButton.classList.remove('btn-outline-success');
+                              activeButton.classList.add('btn-success');
+                        } else if (currentClasses.includes('btn-outline-info')) {
+                              activeButton.classList.remove('btn-outline-info');
+                              activeButton.classList.add('btn-info');
+                        } else if (currentClasses.includes('btn-outline-warning')) {
+                              activeButton.classList.remove('btn-outline-warning');
+                              activeButton.classList.add('btn-warning');
+                        } else if (currentClasses.includes('btn-outline-secondary')) {
+                              activeButton.classList.remove('btn-outline-secondary');
+                              activeButton.classList.add('btn-secondary');
+                        } else if (currentClasses.includes('btn-outline-danger')) {
+                              activeButton.classList.remove('btn-outline-danger');
+                              activeButton.classList.add('btn-danger');
+                        } else if (currentClasses.includes('btn-outline-dark')) {
+                              activeButton.classList.remove('btn-outline-dark');
+                              activeButton.classList.add('btn-dark');
+                        }
+                  }
             }
       </script>
 </body>

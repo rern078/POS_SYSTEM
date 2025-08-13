@@ -112,8 +112,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     $image_path = $image_result;
                               }
 
-                              $stmt = $pdo->prepare("INSERT INTO products (product_code, barcode, qr_code, name, description, price, discount_price, stock_quantity, category, type, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                              if ($stmt->execute([$product_code, $barcode, $qr_code, $name, $description, $price, $discount_price, $stock, $category, $type, $image_path])) {
+                              // Handle clothing-specific fields
+                              $size = null;
+                              $weight = null;
+                              $color = null;
+                              $material = null;
+
+                              if ($type === 'Clothes') {
+                                    $size = !empty($_POST['size']) ? trim($_POST['size']) : null;
+                                    $weight = !empty($_POST['weight']) ? floatval($_POST['weight']) : null;
+                                    $color = !empty($_POST['color']) ? trim($_POST['color']) : null;
+                                    $material = !empty($_POST['material']) ? trim($_POST['material']) : null;
+                              }
+
+                              $stmt = $pdo->prepare("INSERT INTO products (product_code, barcode, qr_code, name, description, price, discount_price, stock_quantity, category, type, size, weight, color, material, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                              if ($stmt->execute([$product_code, $barcode, $qr_code, $name, $description, $price, $discount_price, $stock, $category, $type, $size, $weight, $color, $material, $image_path])) {
                                     $message = 'Product added successfully!';
                               } else {
                                     $error = 'Failed to add product.';
@@ -178,13 +191,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     $image_path = $image_result;
                               }
 
+                              // Handle clothing-specific fields
+                              $size = null;
+                              $weight = null;
+                              $color = null;
+                              $material = null;
+
+                              if ($type === 'Clothes') {
+                                    $size = !empty($_POST['size']) ? trim($_POST['size']) : null;
+                                    $weight = !empty($_POST['weight']) ? floatval($_POST['weight']) : null;
+                                    $color = !empty($_POST['color']) ? trim($_POST['color']) : null;
+                                    $material = !empty($_POST['material']) ? trim($_POST['material']) : null;
+                              }
+
                               // Build update query based on whether image is being updated
                               if ($image_path) {
-                                    $stmt = $pdo->prepare("UPDATE products SET product_code = ?, barcode = ?, qr_code = ?, name = ?, description = ?, price = ?, discount_price = ?, stock_quantity = ?, category = ?, type = ?, image_path = ? WHERE id = ?");
-                                    $params = [$product_code, $barcode, $qr_code, $name, $description, $price, $discount_price, $stock, $category, $type, $image_path, $id];
+                                    $stmt = $pdo->prepare("UPDATE products SET product_code = ?, barcode = ?, qr_code = ?, name = ?, description = ?, price = ?, discount_price = ?, stock_quantity = ?, category = ?, type = ?, size = ?, weight = ?, color = ?, material = ?, image_path = ? WHERE id = ?");
+                                    $params = [$product_code, $barcode, $qr_code, $name, $description, $price, $discount_price, $stock, $category, $type, $size, $weight, $color, $material, $image_path, $id];
                               } else {
-                                    $stmt = $pdo->prepare("UPDATE products SET product_code = ?, barcode = ?, qr_code = ?, name = ?, description = ?, price = ?, discount_price = ?, stock_quantity = ?, category = ?, type = ? WHERE id = ?");
-                                    $params = [$product_code, $barcode, $qr_code, $name, $description, $price, $discount_price, $stock, $category, $type, $id];
+                                    $stmt = $pdo->prepare("UPDATE products SET product_code = ?, barcode = ?, qr_code = ?, name = ?, description = ?, price = ?, discount_price = ?, stock_quantity = ?, category = ?, type = ?, size = ?, weight = ?, color = ?, material = ? WHERE id = ?");
+                                    $params = [$product_code, $barcode, $qr_code, $name, $description, $price, $discount_price, $stock, $category, $type, $size, $weight, $color, $material, $id];
                               }
 
                               if ($stmt->execute($params)) {
@@ -453,6 +479,7 @@ while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
                                                             <th>Stock</th>
                                                             <th>Category</th>
                                                             <th>Type</th>
+                                                            <th>Attributes</th>
                                                             <th>Status</th>
                                                             <th>Actions</th>
                                                       </tr>
@@ -497,6 +524,26 @@ while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
                                                                         <span class="badge bg-<?php echo ($product['type'] ?? 'Food') === 'Food' ? 'warning' : 'info'; ?>">
                                                                               <?php echo htmlspecialchars($product['type'] ?? 'Food'); ?>
                                                                         </span>
+                                                                  </td>
+                                                                  <td>
+                                                                        <?php if (($product['type'] ?? 'Food') === 'Clothes'): ?>
+                                                                              <div class="small">
+                                                                                    <?php if (!empty($product['size'])): ?>
+                                                                                          <span class="badge bg-secondary me-1">Size: <?php echo htmlspecialchars($product['size']); ?></span>
+                                                                                    <?php endif; ?>
+                                                                                    <?php if (!empty($product['color'])): ?>
+                                                                                          <span class="badge bg-primary me-1">Color: <?php echo htmlspecialchars($product['color']); ?></span>
+                                                                                    <?php endif; ?>
+                                                                                    <?php if (!empty($product['material'])): ?>
+                                                                                          <span class="badge bg-info me-1">Material: <?php echo htmlspecialchars($product['material']); ?></span>
+                                                                                    <?php endif; ?>
+                                                                                    <?php if (!empty($product['weight'])): ?>
+                                                                                          <span class="badge bg-dark">Weight: <?php echo htmlspecialchars($product['weight']); ?>g</span>
+                                                                                    <?php endif; ?>
+                                                                              </div>
+                                                                        <?php else: ?>
+                                                                              <span class="text-muted">-</span>
+                                                                        <?php endif; ?>
                                                                   </td>
                                                                   <td>
                                                                         <span class="badge bg-<?php echo $product['stock_quantity'] > 0 ? 'success' : 'danger'; ?>">
@@ -678,6 +725,46 @@ while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
                                           </div>
                                     </div>
 
+                                    <!-- Clothing-specific fields (shown only when type is Clothes) -->
+                                    <div id="clothing-fields" style="display: none;">
+                                          <div class="row">
+                                                <div class="col-md-3">
+                                                      <div class="mb-3">
+                                                            <label for="size" class="form-label">Size</label>
+                                                            <select class="form-select" id="size" name="size">
+                                                                  <option value="">Select Size</option>
+                                                                  <option value="XS">XS</option>
+                                                                  <option value="S">S</option>
+                                                                  <option value="M">M</option>
+                                                                  <option value="L">L</option>
+                                                                  <option value="XL">XL</option>
+                                                                  <option value="XXL">XXL</option>
+                                                                  <option value="XXXL">XXXL</option>
+                                                                  <option value="Custom">Custom</option>
+                                                            </select>
+                                                      </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                      <div class="mb-3">
+                                                            <label for="weight" class="form-label">Weight (grams)</label>
+                                                            <input type="number" class="form-control" id="weight" name="weight" step="0.01" min="0" placeholder="0.00">
+                                                      </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                      <div class="mb-3">
+                                                            <label for="color" class="form-label">Color</label>
+                                                            <input type="text" class="form-control" id="color" name="color" placeholder="e.g., Blue, Red, Black">
+                                                      </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                      <div class="mb-3">
+                                                            <label for="material" class="form-label">Material</label>
+                                                            <input type="text" class="form-control" id="material" name="material" placeholder="e.g., Cotton, Polyester">
+                                                      </div>
+                                                </div>
+                                          </div>
+                                    </div>
+
                                     <div class="mb-3">
                                           <label for="image" class="form-label">Product Image</label>
                                           <input type="file" class="form-control" id="image" name="image" accept="image/*">
@@ -812,6 +899,46 @@ while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
                                           </div>
                                     </div>
 
+                                    <!-- Clothing-specific fields for edit (shown only when type is Clothes) -->
+                                    <div id="edit-clothing-fields" style="display: none;">
+                                          <div class="row">
+                                                <div class="col-md-3">
+                                                      <div class="mb-3">
+                                                            <label for="edit_size" class="form-label">Size</label>
+                                                            <select class="form-select" id="edit_size" name="size">
+                                                                  <option value="">Select Size</option>
+                                                                  <option value="XS">XS</option>
+                                                                  <option value="S">S</option>
+                                                                  <option value="M">M</option>
+                                                                  <option value="L">L</option>
+                                                                  <option value="XL">XL</option>
+                                                                  <option value="XXL">XXL</option>
+                                                                  <option value="XXXL">XXXL</option>
+                                                                  <option value="Custom">Custom</option>
+                                                            </select>
+                                                      </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                      <div class="mb-3">
+                                                            <label for="edit_weight" class="form-label">Weight (grams)</label>
+                                                            <input type="number" class="form-control" id="edit_weight" name="weight" step="0.01" min="0" placeholder="0.00">
+                                                      </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                      <div class="mb-3">
+                                                            <label for="edit_color" class="form-label">Color</label>
+                                                            <input type="text" class="form-control" id="edit_color" name="color" placeholder="e.g., Blue, Red, Black">
+                                                      </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                      <div class="mb-3">
+                                                            <label for="edit_material" class="form-label">Material</label>
+                                                            <input type="text" class="form-control" id="edit_material" name="material" placeholder="e.g., Cotton, Polyester">
+                                                      </div>
+                                                </div>
+                                          </div>
+                                    </div>
+
                                     <div class="mb-3">
                                           <label for="edit_image" class="form-label">Product Image</label>
                                           <input type="file" class="form-control" id="edit_image" name="image" accept="image/*">
@@ -840,6 +967,15 @@ while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
                   document.getElementById('edit_stock_quantity').value = product.stock_quantity;
                   document.getElementById('edit_category').value = product.category || '';
                   document.getElementById('edit_type').value = product.type || 'Food';
+
+                  // Populate clothing fields if they exist
+                  if (product.size) document.getElementById('edit_size').value = product.size;
+                  if (product.weight) document.getElementById('edit_weight').value = product.weight;
+                  if (product.color) document.getElementById('edit_color').value = product.color;
+                  if (product.material) document.getElementById('edit_material').value = product.material;
+
+                  // Show/hide clothing fields based on type
+                  toggleClothingFields('edit');
 
                   const editModal = new bootstrap.Modal(document.getElementById('editProductModal'));
                   editModal.show();
@@ -872,6 +1008,28 @@ while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
 
             function printPage() {
                   window.print();
+            }
+
+            // Function to toggle clothing fields visibility
+            function toggleClothingFields(formType) {
+                  const clothingFields = document.getElementById(formType === 'edit' ? 'edit-clothing-fields' : 'clothing-fields');
+                  const typeSelect = document.getElementById(formType === 'edit' ? 'edit_type' : 'type');
+
+                  if (typeSelect.value === 'Clothes') {
+                        clothingFields.style.display = 'block';
+                  } else {
+                        clothingFields.style.display = 'none';
+                        // Clear clothing fields when hidden
+                        const sizeField = document.getElementById(formType === 'edit' ? 'edit_size' : 'size');
+                        const weightField = document.getElementById(formType === 'edit' ? 'edit_weight' : 'weight');
+                        const colorField = document.getElementById(formType === 'edit' ? 'edit_color' : 'color');
+                        const materialField = document.getElementById(formType === 'edit' ? 'edit_material' : 'material');
+
+                        if (sizeField) sizeField.value = '';
+                        if (weightField) weightField.value = '';
+                        if (colorField) colorField.value = '';
+                        if (materialField) materialField.value = '';
+                  }
             }
 
             // Dynamic category loading functionality
@@ -960,6 +1118,7 @@ while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
                   if (typeSelect) {
                         typeSelect.addEventListener('change', function() {
                               loadMainCategories(this.value, mainCategorySelect, subCategorySelect, categoryInput);
+                              toggleClothingFields('add');
                         });
                   }
 
@@ -979,6 +1138,7 @@ while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
                   if (editTypeSelect) {
                         editTypeSelect.addEventListener('change', function() {
                               loadMainCategories(this.value, editMainCategorySelect, editSubCategorySelect, editCategoryInput);
+                              toggleClothingFields('edit');
                         });
                   }
 
