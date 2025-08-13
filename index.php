@@ -349,7 +349,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
       <link rel="stylesheet" href="assets/css/cart.css">
 
       <!-- Custom Styles for Product Detail Modal -->
-      
+
 </head>
 
 <body>
@@ -403,8 +403,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                               <li class="nav-item">
                                     <a class="nav-link" href="#features">Features</a>
                               </li>
-                              <li class="nav-item">
-                                    <a class="nav-link" href="#products">Products</a>
+                              <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                          Products
+                                    </a>
+                                    <ul class="dropdown-menu">
+                                          <li><a class="dropdown-item" href="#products" onclick="filterByCategory('All Products')">
+                                                      <i class="fas fa-th-large me-2"></i>All Products
+                                                </a></li>
+                                          <li>
+                                                <hr class="dropdown-divider">
+                                          </li>
+                                          <li><a class="dropdown-item" href="#products" onclick="filterByCategory('Food')">
+                                                      <i class="fas fa-utensils me-2"></i>Food
+                                                </a></li>
+                                          <li><a class="dropdown-item" href="#products" onclick="filterByCategory('Cloth')">
+                                                      <i class="fas fa-tshirt me-2"></i>Cloth
+                                                </a></li>
+                                          <li><a class="dropdown-item" href="#products" onclick="filterByCategory('Electronics')">
+                                                      <i class="fas fa-laptop me-2"></i>Electronics
+                                                </a></li>
+                                          <li><a class="dropdown-item" href="#products" onclick="filterByCategory('Beverages')">
+                                                      <i class="fas fa-coffee me-2"></i>Beverages
+                                                </a></li>
+                                          <li><a class="dropdown-item" href="#products" onclick="filterByCategory('Snacks')">
+                                                      <i class="fas fa-cookie-bite me-2"></i>Snacks
+                                                </a></li>
+                                          <li><a class="dropdown-item" href="#products" onclick="filterByCategory('Household')">
+                                                      <i class="fas fa-home me-2"></i>Household
+                                                </a></li>
+                                    </ul>
                               </li>
                               <li class="nav-item">
                                     <a class="nav-link" href="#about">About</a>
@@ -2047,6 +2075,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         }
                   }
             });
+
+            // Category filtering function
+            function filterByCategory(category) {
+                  // Scroll to products section
+                  document.getElementById('products').scrollIntoView({
+                        behavior: 'smooth'
+                  });
+
+                  // Add a small delay to ensure the section is visible
+                  setTimeout(() => {
+                        const productContainers = document.querySelectorAll('.product-item-container');
+
+                        productContainers.forEach(container => {
+                              const categoryBadge = container.querySelector('.category-badge .badge');
+                              const productCategory = categoryBadge ? categoryBadge.textContent.trim() : '';
+
+                              if (category === 'All Products' || productCategory === category) {
+                                    container.style.display = 'block';
+                              } else {
+                                    container.style.display = 'none';
+                              }
+                        });
+
+                        // Show notification
+                        const categoryName = category === 'All Products' ? 'All Products' : category;
+                        showNotification(`Showing ${categoryName}`, 'info');
+                  }, 500);
+            }
       </script>
 </body>
 

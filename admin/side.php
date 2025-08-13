@@ -33,6 +33,18 @@
                               </a>
                         </li>
                         <li class="sidebar-nav-item">
+                              <a class="sidebar-nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'categories.php' ? 'active' : ''; ?>" href="categories.php">
+                                    <i class="fas fa-tags"></i>
+                                    <span>Categories</span>
+                              </a>
+                        </li>
+                        <li class="sidebar-nav-item">
+                              <a class="sidebar-nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'subcategories.php' ? 'active' : ''; ?>" href="subcategories.php">
+                                    <i class="fas fa-sitemap"></i>
+                                    <span>Subcategories</span>
+                              </a>
+                        </li>
+                        <li class="sidebar-nav-item">
                               <a class="sidebar-nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'sales.php' ? 'active' : ''; ?>" href="sales.php">
                                     <i class="fas fa-chart-line"></i>
                                     <span>Sales</span>
@@ -80,6 +92,7 @@
                                     <span>QR Codes</span>
                               </a>
                         </li>
+
                   </ul>
             </div>
 

@@ -377,6 +377,10 @@ body {
       box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
 }
 
+form .form-select {
+      padding: 0.75rem 1rem;
+}
+
 .admin-sidebar.collapsed {
       width: var(--sidebar-collapsed-width);
 }

@@ -216,6 +216,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Get inventory data with search and filter
 $search = $_GET['search'] ?? '';
 $category = $_GET['category'] ?? '';
+$type_filter = $_GET['type_filter'] ?? '';
 $stock_status = $_GET['stock_status'] ?? '';
 $sort = $_GET['sort'] ?? 'name';
 $order = $_GET['order'] ?? 'ASC';
@@ -238,6 +239,11 @@ if (!empty($search)) {
 if (!empty($category)) {
       $whereConditions[] = "p.category = ?";
       $params[] = $category;
+}
+
+if (!empty($type_filter)) {
+      $whereConditions[] = "p.type = ?";
+      $params[] = $type_filter;
 }
 
 if (!empty($stock_status)) {
@@ -493,6 +499,14 @@ $stats = $stmt->fetch(PDO::FETCH_ASSOC);
                                                 </select>
                                           </div>
                                           <div class="col-md-2">
+                                                <label for="type_filter" class="form-label">Type</label>
+                                                <select class="form-select" id="type_filter" name="type_filter">
+                                                      <option value="">All Types</option>
+                                                      <option value="Food" <?php echo (isset($_GET['type_filter']) && $_GET['type_filter'] === 'Food') ? 'selected' : ''; ?>>Food</option>
+                                                      <option value="Clothes" <?php echo (isset($_GET['type_filter']) && $_GET['type_filter'] === 'Clothes') ? 'selected' : ''; ?>>Clothes</option>
+                                                </select>
+                                          </div>
+                                          <div class="col-md-2">
                                                 <label for="stock_status" class="form-label">Stock Status</label>
                                                 <select class="form-select" id="stock_status" name="stock_status">
                                                       <option value="">All Status</option>
@@ -557,6 +571,7 @@ $stats = $stmt->fetch(PDO::FETCH_ASSOC);
                                                             <th>Product</th>
                                                             <th>Code</th>
                                                             <th>Category</th>
+                                                            <th>Type</th>
                                                             <th>Current Stock</th>
                                                             <th>Status</th>
                                                             <th>Total Sold</th>
@@ -589,6 +604,11 @@ $stats = $stmt->fetch(PDO::FETCH_ASSOC);
                                                                         <span class="badge bg-secondary"><?php echo htmlspecialchars($item['product_code'] ?? 'N/A'); ?></span>
                                                                   </td>
                                                                   <td><?php echo htmlspecialchars($item['category'] ?? 'Uncategorized'); ?></td>
+                                                                  <td>
+                                                                        <span class="badge bg-<?php echo ($item['type'] ?? 'Food') === 'Food' ? 'warning' : 'info'; ?>">
+                                                                              <?php echo htmlspecialchars($item['type'] ?? 'Food'); ?>
+                                                                        </span>
+                                                                  </td>
                                                                   <td>
                                                                         <span class="fw-bold text-<?php echo $stock_status_class; ?>">
                                                                               <?php echo number_format($item['stock_quantity']); ?>
@@ -630,7 +650,7 @@ $stats = $stmt->fetch(PDO::FETCH_ASSOC);
                                                 <ul class="pagination justify-content-center">
                                                       <?php if ($current_page > 1): ?>
                                                             <li class="page-item">
-                                                                  <a class="page-link" href="?page=<?php echo $current_page - 1; ?>&search=<?php echo urlencode($search); ?>&category=<?php echo urlencode($category); ?>&stock_status=<?php echo urlencode($stock_status); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
+                                                                  <a class="page-link" href="?page=<?php echo $current_page - 1; ?>&search=<?php echo urlencode($search); ?>&category=<?php echo urlencode($category); ?>&type_filter=<?php echo urlencode($type_filter); ?>&stock_status=<?php echo urlencode($stock_status); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
                                                                         Previous
                                                                   </a>
                                                             </li>
@@ -638,7 +658,7 @@ $stats = $stmt->fetch(PDO::FETCH_ASSOC);
 
                                                       <?php for ($i = max(1, $current_page - 2); $i <= min($total_pages, $current_page + 2); $i++): ?>
                                                             <li class="page-item <?php echo $i === $current_page ? 'active' : ''; ?>">
-                                                                  <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($search); ?>&category=<?php echo urlencode($category); ?>&stock_status=<?php echo urlencode($stock_status); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
+                                                                  <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($search); ?>&category=<?php echo urlencode($category); ?>&type_filter=<?php echo urlencode($type_filter); ?>&stock_status=<?php echo urlencode($stock_status); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
                                                                         <?php echo $i; ?>
                                                                   </a>
                                                             </li>
@@ -646,7 +666,7 @@ $stats = $stmt->fetch(PDO::FETCH_ASSOC);
 
                                                       <?php if ($current_page < $total_pages): ?>
                                                             <li class="page-item">
-                                                                  <a class="page-link" href="?page=<?php echo $current_page + 1; ?>&search=<?php echo urlencode($search); ?>&category=<?php echo urlencode($category); ?>&stock_status=<?php echo urlencode($stock_status); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
+                                                                  <a class="page-link" href="?page=<?php echo $current_page + 1; ?>&search=<?php echo urlencode($search); ?>&category=<?php echo urlencode($category); ?>&type_filter=<?php echo urlencode($type_filter); ?>&stock_status=<?php echo urlencode($stock_status); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
                                                                         Next
                                                                   </a>
                                                             </li>

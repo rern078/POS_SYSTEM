@@ -65,6 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $price = floatval($_POST['price']);
                         $discount_price = !empty($_POST['discount_price']) ? floatval($_POST['discount_price']) : null;
                         $stock = intval($_POST['stock_quantity']);
+                        $type = trim($_POST['type']);
 
                         // Handle category - use new category if provided, otherwise use dropdown selection
                         $category = '';
@@ -72,6 +73,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                               $category = trim($_POST['new_category']);
                         } elseif (!empty($_POST['category'])) {
                               $category = trim($_POST['category']);
+                        } elseif (!empty($_POST['main_category']) && !empty($_POST['sub_category'])) {
+                              // Get category names from IDs
+                              $mainCatStmt = $pdo->prepare("SELECT name FROM categories WHERE id = ?");
+                              $subCatStmt = $pdo->prepare("SELECT name FROM categories WHERE id = ?");
+
+                              $mainCatStmt->execute([$_POST['main_category']]);
+                              $subCatStmt->execute([$_POST['sub_category']]);
+
+                              $mainCatName = $mainCatStmt->fetchColumn();
+                              $subCatName = $subCatStmt->fetchColumn();
+
+                              if ($mainCatName && $subCatName) {
+                                    $category = $mainCatName . ' > ' . $subCatName;
+                              }
+                        } elseif (!empty($_POST['main_category'])) {
+                              // Only main category selected
+                              $mainCatStmt = $pdo->prepare("SELECT name FROM categories WHERE id = ?");
+                              $mainCatStmt->execute([$_POST['main_category']]);
+                              $mainCatName = $mainCatStmt->fetchColumn();
+
+                              if ($mainCatName) {
+                                    $category = $mainCatName;
+                              }
                         }
 
                         if (empty($name) || $price <= 0) {
@@ -88,8 +112,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     $image_path = $image_result;
                               }
 
-                              $stmt = $pdo->prepare("INSERT INTO products (product_code, barcode, qr_code, name, description, price, discount_price, stock_quantity, category, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                              if ($stmt->execute([$product_code, $barcode, $qr_code, $name, $description, $price, $discount_price, $stock, $category, $image_path])) {
+                              $stmt = $pdo->prepare("INSERT INTO products (product_code, barcode, qr_code, name, description, price, discount_price, stock_quantity, category, type, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                              if ($stmt->execute([$product_code, $barcode, $qr_code, $name, $description, $price, $discount_price, $stock, $category, $type, $image_path])) {
                                     $message = 'Product added successfully!';
                               } else {
                                     $error = 'Failed to add product.';
@@ -107,6 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $price = floatval($_POST['price']);
                         $discount_price = !empty($_POST['discount_price']) ? floatval($_POST['discount_price']) : null;
                         $stock = intval($_POST['stock_quantity']);
+                        $type = trim($_POST['type']);
 
                         // Handle category - use new category if provided, otherwise use dropdown selection
                         $category = '';
@@ -114,6 +139,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                               $category = trim($_POST['new_category']);
                         } elseif (!empty($_POST['category'])) {
                               $category = trim($_POST['category']);
+                        } elseif (!empty($_POST['main_category']) && !empty($_POST['sub_category'])) {
+                              // Get category names from IDs
+                              $mainCatStmt = $pdo->prepare("SELECT name FROM categories WHERE id = ?");
+                              $subCatStmt = $pdo->prepare("SELECT name FROM categories WHERE id = ?");
+
+                              $mainCatStmt->execute([$_POST['main_category']]);
+                              $subCatStmt->execute([$_POST['sub_category']]);
+
+                              $mainCatName = $mainCatStmt->fetchColumn();
+                              $subCatName = $subCatStmt->fetchColumn();
+
+                              if ($mainCatName && $subCatName) {
+                                    $category = $mainCatName . ' > ' . $subCatName;
+                              }
+                        } elseif (!empty($_POST['main_category'])) {
+                              // Only main category selected
+                              $mainCatStmt = $pdo->prepare("SELECT name FROM categories WHERE id = ?");
+                              $mainCatStmt->execute([$_POST['main_category']]);
+                              $mainCatName = $mainCatStmt->fetchColumn();
+
+                              if ($mainCatName) {
+                                    $category = $mainCatName;
+                              }
                         }
 
                         if (empty($name) || $price <= 0) {
@@ -132,11 +180,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                               // Build update query based on whether image is being updated
                               if ($image_path) {
-                                    $stmt = $pdo->prepare("UPDATE products SET product_code = ?, barcode = ?, qr_code = ?, name = ?, description = ?, price = ?, discount_price = ?, stock_quantity = ?, category = ?, image_path = ? WHERE id = ?");
-                                    $params = [$product_code, $barcode, $qr_code, $name, $description, $price, $discount_price, $stock, $category, $image_path, $id];
+                                    $stmt = $pdo->prepare("UPDATE products SET product_code = ?, barcode = ?, qr_code = ?, name = ?, description = ?, price = ?, discount_price = ?, stock_quantity = ?, category = ?, type = ?, image_path = ? WHERE id = ?");
+                                    $params = [$product_code, $barcode, $qr_code, $name, $description, $price, $discount_price, $stock, $category, $type, $image_path, $id];
                               } else {
-                                    $stmt = $pdo->prepare("UPDATE products SET product_code = ?, barcode = ?, qr_code = ?, name = ?, description = ?, price = ?, discount_price = ?, stock_quantity = ?, category = ? WHERE id = ?");
-                                    $params = [$product_code, $barcode, $qr_code, $name, $description, $price, $discount_price, $stock, $category, $id];
+                                    $stmt = $pdo->prepare("UPDATE products SET product_code = ?, barcode = ?, qr_code = ?, name = ?, description = ?, price = ?, discount_price = ?, stock_quantity = ?, category = ?, type = ? WHERE id = ?");
+                                    $params = [$product_code, $barcode, $qr_code, $name, $description, $price, $discount_price, $stock, $category, $type, $id];
                               }
 
                               if ($stmt->execute($params)) {
@@ -163,6 +211,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Get products with search and filter
 $search = $_GET['search'] ?? '';
 $category = $_GET['category'] ?? '';
+$type_filter = $_GET['type_filter'] ?? '';
 $sort = $_GET['sort'] ?? 'id';
 $order = $_GET['order'] ?? 'ASC';
 
@@ -186,6 +235,11 @@ if (!empty($search)) {
 if (!empty($category)) {
       $whereConditions[] = "category = ?";
       $params[] = $category;
+}
+
+if (!empty($type_filter)) {
+      $whereConditions[] = "type = ?";
+      $params[] = $type_filter;
 }
 
 $whereClause = !empty($whereConditions) ? 'WHERE ' . implode(' AND ', $whereConditions) : '';
@@ -314,7 +368,7 @@ while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
                                                       placeholder="Search by name or description..."
                                                       value="<?php echo htmlspecialchars($search); ?>">
                                           </div>
-                                          <div class="col-md-3">
+                                          <div class="col-md-2">
                                                 <label for="category" class="form-label">Category</label>
                                                 <select class="form-select" id="category" name="category">
                                                       <option value="">All Categories</option>
@@ -324,6 +378,14 @@ while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
                                                                   <?php echo htmlspecialchars($cat); ?>
                                                             </option>
                                                       <?php endforeach; ?>
+                                                </select>
+                                          </div>
+                                          <div class="col-md-2">
+                                                <label for="type_filter" class="form-label">Type</label>
+                                                <select class="form-select" id="type_filter" name="type_filter">
+                                                      <option value="">All Types</option>
+                                                      <option value="Food" <?php echo (isset($_GET['type_filter']) && $_GET['type_filter'] === 'Food') ? 'selected' : ''; ?>>Food</option>
+                                                      <option value="Clothes" <?php echo (isset($_GET['type_filter']) && $_GET['type_filter'] === 'Clothes') ? 'selected' : ''; ?>>Clothes</option>
                                                 </select>
                                           </div>
                                           <div class="col-md-2">
@@ -390,6 +452,7 @@ while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
                                                             <th>Discount</th>
                                                             <th>Stock</th>
                                                             <th>Category</th>
+                                                            <th>Type</th>
                                                             <th>Status</th>
                                                             <th>Actions</th>
                                                       </tr>
@@ -431,6 +494,11 @@ while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
                                                                   </td>
                                                                   <td><?php echo htmlspecialchars($product['category'] ?? 'Uncategorized'); ?></td>
                                                                   <td>
+                                                                        <span class="badge bg-<?php echo ($product['type'] ?? 'Food') === 'Food' ? 'warning' : 'info'; ?>">
+                                                                              <?php echo htmlspecialchars($product['type'] ?? 'Food'); ?>
+                                                                        </span>
+                                                                  </td>
+                                                                  <td>
                                                                         <span class="badge bg-<?php echo $product['stock_quantity'] > 0 ? 'success' : 'danger'; ?>">
                                                                               <?php echo $product['stock_quantity'] > 0 ? 'In Stock' : 'Out of Stock'; ?>
                                                                         </span>
@@ -457,7 +525,7 @@ while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
                                                 <ul class="pagination justify-content-center">
                                                       <?php if ($current_page > 1): ?>
                                                             <li class="page-item">
-                                                                  <a class="page-link" href="?page=<?php echo $current_page - 1; ?>&search=<?php echo urlencode($search); ?>&category=<?php echo urlencode($category); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
+                                                                  <a class="page-link" href="?page=<?php echo $current_page - 1; ?>&search=<?php echo urlencode($search); ?>&category=<?php echo urlencode($category); ?>&type_filter=<?php echo urlencode($type_filter); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
                                                                         Previous
                                                                   </a>
                                                             </li>
@@ -465,7 +533,7 @@ while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
 
                                                       <?php for ($i = max(1, $current_page - 2); $i <= min($total_pages, $current_page + 2); $i++): ?>
                                                             <li class="page-item <?php echo $i === $current_page ? 'active' : ''; ?>">
-                                                                  <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($search); ?>&category=<?php echo urlencode($category); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
+                                                                  <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($search); ?>&category=<?php echo urlencode($category); ?>&type_filter=<?php echo urlencode($type_filter); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
                                                                         <?php echo $i; ?>
                                                                   </a>
                                                             </li>
@@ -473,7 +541,7 @@ while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
 
                                                       <?php if ($current_page < $total_pages): ?>
                                                             <li class="page-item">
-                                                                  <a class="page-link" href="?page=<?php echo $current_page + 1; ?>&search=<?php echo urlencode($search); ?>&category=<?php echo urlencode($category); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
+                                                                  <a class="page-link" href="?page=<?php echo $current_page + 1; ?>&search=<?php echo urlencode($search); ?>&category=<?php echo urlencode($category); ?>&type_filter=<?php echo urlencode($type_filter); ?>&sort=<?php echo urlencode($sort); ?>&order=<?php echo urlencode($order); ?>">
                                                                         Next
                                                                   </a>
                                                             </li>
@@ -567,15 +635,39 @@ while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
                                     </div>
 
                                     <div class="row">
+                                          <div class="col-md-4">
+                                                <div class="mb-3">
+                                                      <label for="type" class="form-label">Product Type *</label>
+                                                      <select class="form-select" id="type" name="type" required>
+                                                            <option value="">Select Type</option>
+                                                            <option value="Food">Food</option>
+                                                            <option value="Clothes">Clothes</option>
+                                                      </select>
+                                                </div>
+                                          </div>
+                                          <div class="col-md-4">
+                                                <div class="mb-3">
+                                                      <label for="main_category" class="form-label">Main Category</label>
+                                                      <select class="form-select" id="main_category" name="main_category">
+                                                            <option value="">Select Main Category</option>
+                                                      </select>
+                                                </div>
+                                          </div>
+                                          <div class="col-md-4">
+                                                <div class="mb-3">
+                                                      <label for="sub_category" class="form-label">Sub Category</label>
+                                                      <select class="form-select" id="sub_category" name="sub_category">
+                                                            <option value="">Select Sub Category</option>
+                                                      </select>
+                                                </div>
+                                          </div>
+                                    </div>
+
+                                    <div class="row">
                                           <div class="col-md-6">
                                                 <div class="mb-3">
-                                                      <label for="category" class="form-label">Category</label>
-                                                      <select class="form-select" id="category" name="category">
-                                                            <option value="">Select Category</option>
-                                                            <?php foreach ($categories as $cat): ?>
-                                                                  <option value="<?php echo htmlspecialchars($cat); ?>"><?php echo htmlspecialchars($cat); ?></option>
-                                                            <?php endforeach; ?>
-                                                      </select>
+                                                      <label for="category" class="form-label">Category (Auto-filled)</label>
+                                                      <input type="text" class="form-control" id="category" name="category" readonly placeholder="Category will be auto-filled">
                                                 </div>
                                           </div>
                                           <div class="col-md-6">
@@ -677,15 +769,39 @@ while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
                                     </div>
 
                                     <div class="row">
+                                          <div class="col-md-4">
+                                                <div class="mb-3">
+                                                      <label for="edit_type" class="form-label">Product Type *</label>
+                                                      <select class="form-select" id="edit_type" name="type" required>
+                                                            <option value="">Select Type</option>
+                                                            <option value="Food">Food</option>
+                                                            <option value="Clothes">Clothes</option>
+                                                      </select>
+                                                </div>
+                                          </div>
+                                          <div class="col-md-4">
+                                                <div class="mb-3">
+                                                      <label for="edit_main_category" class="form-label">Main Category</label>
+                                                      <select class="form-select" id="edit_main_category" name="main_category">
+                                                            <option value="">Select Main Category</option>
+                                                      </select>
+                                                </div>
+                                          </div>
+                                          <div class="col-md-4">
+                                                <div class="mb-3">
+                                                      <label for="edit_sub_category" class="form-label">Sub Category</label>
+                                                      <select class="form-select" id="edit_sub_category" name="sub_category">
+                                                            <option value="">Select Sub Category</option>
+                                                      </select>
+                                                </div>
+                                          </div>
+                                    </div>
+
+                                    <div class="row">
                                           <div class="col-md-6">
                                                 <div class="mb-3">
-                                                      <label for="edit_category" class="form-label">Category</label>
-                                                      <select class="form-select" id="edit_category" name="category">
-                                                            <option value="">Select Category</option>
-                                                            <?php foreach ($categories as $cat): ?>
-                                                                  <option value="<?php echo htmlspecialchars($cat); ?>"><?php echo htmlspecialchars($cat); ?></option>
-                                                            <?php endforeach; ?>
-                                                      </select>
+                                                      <label for="edit_category" class="form-label">Category (Auto-filled)</label>
+                                                      <input type="text" class="form-control" id="edit_category" name="category" readonly placeholder="Category will be auto-filled">
                                                 </div>
                                           </div>
                                           <div class="col-md-6">
@@ -723,6 +839,7 @@ while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
                   document.getElementById('edit_discount_price').value = product.discount_price || '';
                   document.getElementById('edit_stock_quantity').value = product.stock_quantity;
                   document.getElementById('edit_category').value = product.category || '';
+                  document.getElementById('edit_type').value = product.type || 'Food';
 
                   const editModal = new bootstrap.Modal(document.getElementById('editProductModal'));
                   editModal.show();
@@ -756,6 +873,127 @@ while ($row = $catStmt->fetch(PDO::FETCH_ASSOC)) {
             function printPage() {
                   window.print();
             }
+
+            // Dynamic category loading functionality
+            document.addEventListener('DOMContentLoaded', function() {
+                  const typeSelect = document.getElementById('type');
+                  const mainCategorySelect = document.getElementById('main_category');
+                  const subCategorySelect = document.getElementById('sub_category');
+                  const categoryInput = document.getElementById('category');
+
+                  const editTypeSelect = document.getElementById('edit_type');
+                  const editMainCategorySelect = document.getElementById('edit_main_category');
+                  const editSubCategorySelect = document.getElementById('edit_sub_category');
+                  const editCategoryInput = document.getElementById('edit_category');
+
+                  // Function to load main categories
+                  function loadMainCategories(type, mainSelect, subSelect, categoryInput) {
+                        if (!type) {
+                              mainSelect.innerHTML = '<option value="">Select Main Category</option>';
+                              subSelect.innerHTML = '<option value="">Select Sub Category</option>';
+                              categoryInput.value = '';
+                              return;
+                        }
+
+                        fetch(`api/get_categories.php?type=${encodeURIComponent(type)}`)
+                              .then(response => response.json())
+                              .then(data => {
+                                    if (data.success) {
+                                          mainSelect.innerHTML = '<option value="">Select Main Category</option>';
+                                          data.categories.forEach(category => {
+                                                const option = document.createElement('option');
+                                                option.value = category.id;
+                                                option.textContent = category.name;
+                                                mainSelect.appendChild(option);
+                                          });
+                                    }
+                                    subSelect.innerHTML = '<option value="">Select Sub Category</option>';
+                                    categoryInput.value = '';
+                              })
+                              .catch(error => {
+                                    console.error('Error loading categories:', error);
+                              });
+                  }
+
+                  // Function to load sub categories
+                  function loadSubCategories(parentId, subSelect, categoryInput) {
+                        if (!parentId) {
+                              subSelect.innerHTML = '<option value="">Select Sub Category</option>';
+                              categoryInput.value = '';
+                              return;
+                        }
+
+                        fetch(`api/get_categories.php?type=${encodeURIComponent(typeSelect.value)}&parent_id=${encodeURIComponent(parentId)}`)
+                              .then(response => response.json())
+                              .then(data => {
+                                    if (data.success) {
+                                          subSelect.innerHTML = '<option value="">Select Sub Category</option>';
+                                          data.categories.forEach(category => {
+                                                const option = document.createElement('option');
+                                                option.value = category.id;
+                                                option.textContent = category.name;
+                                                subSelect.appendChild(option);
+                                          });
+                                    }
+                                    categoryInput.value = '';
+                              })
+                              .catch(error => {
+                                    console.error('Error loading subcategories:', error);
+                              });
+                  }
+
+                  // Function to update category input
+                  function updateCategoryInput(mainSelect, subSelect, categoryInput) {
+                        const mainCategory = mainSelect.options[mainSelect.selectedIndex]?.text || '';
+                        const subCategory = subSelect.options[subSelect.selectedIndex]?.text || '';
+
+                        if (mainCategory && subCategory) {
+                              categoryInput.value = `${mainCategory} > ${subCategory}`;
+                        } else if (mainCategory) {
+                              categoryInput.value = mainCategory;
+                        } else {
+                              categoryInput.value = '';
+                        }
+                  }
+
+                  // Add event listeners for Add Product form
+                  if (typeSelect) {
+                        typeSelect.addEventListener('change', function() {
+                              loadMainCategories(this.value, mainCategorySelect, subCategorySelect, categoryInput);
+                        });
+                  }
+
+                  if (mainCategorySelect) {
+                        mainCategorySelect.addEventListener('change', function() {
+                              loadSubCategories(this.value, subCategorySelect, categoryInput);
+                        });
+                  }
+
+                  if (subCategorySelect) {
+                        subCategorySelect.addEventListener('change', function() {
+                              updateCategoryInput(mainCategorySelect, subCategorySelect, categoryInput);
+                        });
+                  }
+
+                  // Add event listeners for Edit Product form
+                  if (editTypeSelect) {
+                        editTypeSelect.addEventListener('change', function() {
+                              loadMainCategories(this.value, editMainCategorySelect, editSubCategorySelect, editCategoryInput);
+                        });
+                  }
+
+                  if (editMainCategorySelect) {
+                        editMainCategorySelect.addEventListener('change', function() {
+                              loadSubCategories(this.value, editSubCategorySelect, editCategoryInput);
+                        });
+                  }
+
+                  if (editSubCategorySelect) {
+                        editSubCategorySelect.addEventListener('change', function() {
+                              updateCategoryInput(editMainCategorySelect, editSubCategorySelect, editCategoryInput);
+                        });
+                  }
+            });
       </script>
 </body>
 
