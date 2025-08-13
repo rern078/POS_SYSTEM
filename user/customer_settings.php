@@ -9,6 +9,46 @@ if (!isLoggedIn() || $_SESSION['role'] !== 'customer') {
       exit();
 }
 
+// Handle password change form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+      $current_password = $_POST['current_password'] ?? '';
+      $new_password = $_POST['new_password'] ?? '';
+      $confirm_password = $_POST['confirm_password'] ?? '';
+
+      // Validate input
+      if (empty($current_password) || empty($new_password) || empty($confirm_password)) {
+            $_SESSION['change_password_error'] = 'All fields are required.';
+      } elseif ($new_password !== $confirm_password) {
+            $_SESSION['change_password_error'] = 'New password and confirm password do not match.';
+      } elseif (strlen($new_password) < 6) {
+            $_SESSION['change_password_error'] = 'New password must be at least 6 characters long.';
+      } else {
+            // Verify current password and update
+            $pdo = getDBConnection();
+            $stmt = $pdo->prepare("SELECT password FROM users WHERE id = ?");
+            $stmt->execute([$_SESSION['user_id']]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($user && password_verify($current_password, $user['password'])) {
+                  // Hash new password and update
+                  $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+                  $update_stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
+
+                  if ($update_stmt->execute([$hashed_password, $_SESSION['user_id']])) {
+                        $_SESSION['change_password_success'] = true;
+                  } else {
+                        $_SESSION['change_password_error'] = 'Failed to update password. Please try again.';
+                  }
+            } else {
+                  $_SESSION['change_password_error'] = 'Current password is incorrect.';
+            }
+      }
+
+      // Redirect to prevent form resubmission
+      header('Location: ' . $_SERVER['PHP_SELF']);
+      exit();
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
