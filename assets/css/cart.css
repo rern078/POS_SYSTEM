@@ -53,6 +53,14 @@
       padding: 10px 0;
 }
 
+.cart-item-image {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid #dee2e6;
+}
+
 .quantity-control {
       display: flex;
       align-items: center;
@@ -185,13 +193,7 @@
 .quantity-controls {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 20px;
-      background: rgba(255, 255, 255, 0.9);
-      padding: 15px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      gap: 5px;
 }
 
 .quantity-display {
