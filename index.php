@@ -391,7 +391,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
       <nav class="navbar navbar-expand-lg navbar-light fixed-top">
             <div class="container">
                   <a class="navbar-brand" href="#">
-                        <i class="fas fa-store text-primary me-2"></i>MCH-DIGITAL
+                        <i class="fas fa-store text-primary me-2"></i>CH-FASHION
                   </a>
 
                   <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
