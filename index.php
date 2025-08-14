@@ -162,6 +162,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $currency_code = isset($_POST['currency_code']) ? $_POST['currency_code'] : 'USD';
             $amount_tendered = isset($_POST['amount_tendered']) ? (float)$_POST['amount_tendered'] : 0;
             $change_amount = isset($_POST['change_amount']) ? (float)$_POST['change_amount'] : 0;
+
+            // Card payment fields
+            $card_type = isset($_POST['card_type']) ? trim($_POST['card_type']) : null;
+            $card_number = isset($_POST['card_number']) ? trim($_POST['card_number']) : null;
+            $card_expiry = isset($_POST['card_expiry']) ? trim($_POST['card_expiry']) : null;
+            $card_cvv = isset($_POST['card_cvv']) ? trim($_POST['card_cvv']) : null;
+            $card_holder = isset($_POST['card_holder']) ? trim($_POST['card_holder']) : null;
+
             $total_amount = 0;
 
             // Calculate total
@@ -194,8 +202,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 // Convert total amount to selected currency
                 $converted_total = $exchangeRate->convertCurrency($total_amount, 'USD', $currency_code);
 
-                $stmt = $pdo->prepare("INSERT INTO orders (user_id, customer_name, customer_email, total_amount, currency_code, exchange_rate, original_amount, payment_method, amount_tendered, change_amount, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed')");
-                $stmt->execute([$user_id, $customer_name, $customer_email, $converted_total, $currency_code, $exchange_rate, $original_amount, $payment_method, $amount_tendered, $change_amount]);
+                $stmt = $pdo->prepare("INSERT INTO orders (user_id, customer_name, customer_email, total_amount, currency_code, exchange_rate, original_amount, payment_method, card_type, card_number, card_expiry, card_cvv, card_holder, amount_tendered, change_amount, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')");
+                $stmt->execute([$user_id, $customer_name, $customer_email, $converted_total, $currency_code, $exchange_rate, $original_amount, $payment_method, $card_type, $card_number, $card_expiry, $card_cvv, $card_holder, $amount_tendered, $change_amount]);
                 $order_id = $pdo->lastInsertId();
 
                 // Add order items and update stock
@@ -753,7 +761,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     <?php include 'includes/footer.php'; ?>
 
-    
+
 </body>
 
 </html>

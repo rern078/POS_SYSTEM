@@ -639,6 +639,20 @@ function generateReceiptHTML($order, $order_items)
                                                             <td><strong>Payment Method:</strong></td>
                                                             <td>${order.payment_method.charAt(0).toUpperCase() + order.payment_method.slice(1)}</td>
                                                       </tr>
+                                                      ${order.payment_method === 'card' && order.card_type ? `
+                                                      <tr>
+                                                            <td><strong>Card Type:</strong></td>
+                                                            <td>${order.card_type.charAt(0).toUpperCase() + order.card_type.slice(1)}</td>
+                                                      </tr>
+                                                      <tr>
+                                                            <td><strong>Card Number:</strong></td>
+                                                            <td>**** **** **** ${order.card_number ? order.card_number.slice(-4) : '****'}</td>
+                                                      </tr>
+                                                      <tr>
+                                                            <td><strong>Cardholder:</strong></td>
+                                                            <td>${order.card_holder || 'N/A'}</td>
+                                                      </tr>
+                                                      ` : ''}
                                                 </table>
                                           </div>
                                           <div class="col-md-6">

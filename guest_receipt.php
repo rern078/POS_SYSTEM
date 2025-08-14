@@ -109,6 +109,32 @@ if ($is_ajax) {
                               <?php echo ucfirst($order['payment_method']); ?>
                         </div>
                   </div>
+                  <?php if ($order['payment_method'] === 'card' && $order['card_type']): ?>
+                        <div class="row">
+                              <div class="col-6">
+                                    <strong>Card Type:</strong>
+                              </div>
+                              <div class="col-6 text-end">
+                                    <?php echo ucfirst($order['card_type']); ?>
+                              </div>
+                        </div>
+                        <div class="row">
+                              <div class="col-6">
+                                    <strong>Card Number:</strong>
+                              </div>
+                              <div class="col-6 text-end">
+                                    **** **** **** <?php echo $order['card_number'] ? substr($order['card_number'], -4) : '****'; ?>
+                              </div>
+                        </div>
+                        <div class="row">
+                              <div class="col-6">
+                                    <strong>Cardholder:</strong>
+                              </div>
+                              <div class="col-6 text-end">
+                                    <?php echo htmlspecialchars($order['card_holder'] ?? 'N/A'); ?>
+                              </div>
+                        </div>
+                  <?php endif; ?>
                   <?php if ($order['currency_code'] && $order['currency_code'] !== 'USD'): ?>
                         <div class="row">
                               <div class="col-6">

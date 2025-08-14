@@ -474,6 +474,12 @@ $order_stats = $stmt->fetch(PDO::FETCH_ASSOC);
                                                       <tr><td><strong>Time:</strong></td><td>${new Date(order.created_at).toLocaleTimeString()}</td></tr>
                                                       <tr><td><strong>Status:</strong></td><td><span class="badge bg-${order.status === 'completed' ? 'success' : (order.status === 'pending' ? 'warning' : 'danger')}">${order.status.charAt(0).toUpperCase() + order.status.slice(1)}</span></td></tr>
                                                       <tr><td><strong>Payment Method:</strong></td><td>${order.payment_method.charAt(0).toUpperCase() + order.payment_method.slice(1)}</td></tr>
+                                                      ${order.payment_method === 'card' && order.card_type ? `
+                                                      <tr><td><strong>Card Type:</strong></td><td>${order.card_type.charAt(0).toUpperCase() + order.card_type.slice(1)}</td></tr>
+                                                      <tr><td><strong>Card Number:</strong></td><td>**** **** **** ${order.card_number ? order.card_number.slice(-4) : '****'}</td></tr>
+                                                      <tr><td><strong>Card Expiry:</strong></td><td>${order.card_expiry || 'N/A'}</td></tr>
+                                                      <tr><td><strong>Cardholder:</strong></td><td>${order.card_holder || 'N/A'}</td></tr>
+                                                      ` : ''}
                                                 </table>
                                           </div>
                                           <div class="col-md-6">

@@ -4,51 +4,51 @@ require_once '../config/database.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'customer') {
-      http_response_code(401);
-      echo json_encode(['error' => 'Unauthorized']);
-      exit();
+    http_response_code(401);
+    echo json_encode(['error' => 'Unauthorized']);
+    exit();
 }
 
 $order_id = $_GET['order_id'] ?? null;
 $user_id = $_SESSION['user_id'];
 
 if (!$order_id) {
-      http_response_code(400);
-      echo json_encode(['error' => 'Order ID required']);
-      exit();
+    http_response_code(400);
+    echo json_encode(['error' => 'Order ID required']);
+    exit();
 }
 
 try {
-      $pdo = getDBConnection();
+    $pdo = getDBConnection();
 
-      // Get order details
-      $stmt = $pdo->prepare("
+    // Get order details
+    $stmt = $pdo->prepare("
         SELECT o.*, u.full_name, u.email, u.phone
         FROM orders o
         LEFT JOIN users u ON o.user_id = u.id
         WHERE o.id = ? AND o.user_id = ?
     ");
-      $stmt->execute([$order_id, $user_id]);
-      $order = $stmt->fetch();
+    $stmt->execute([$order_id, $user_id]);
+    $order = $stmt->fetch();
 
-      if (!$order) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Order not found']);
-            exit();
-      }
+    if (!$order) {
+        http_response_code(404);
+        echo json_encode(['error' => 'Order not found']);
+        exit();
+    }
 
-      // Get order items
-      $stmt = $pdo->prepare("
+    // Get order items
+    $stmt = $pdo->prepare("
         SELECT oi.*, p.name, p.product_code, p.image_path
         FROM order_items oi
         JOIN products p ON oi.product_id = p.id
         WHERE oi.order_id = ?
     ");
-      $stmt->execute([$order_id]);
-      $items = $stmt->fetchAll();
+    $stmt->execute([$order_id]);
+    $items = $stmt->fetchAll();
 
-      // Generate HTML
-      $html = '
+    // Generate HTML
+    $html = '
     <div class="row">
         <div class="col-md-6">
             <h6 class="text-muted mb-2">Order Information</h6>
@@ -57,6 +57,12 @@ try {
                 <tr><td><strong>Date:</strong></td><td>' . date('M d, Y H:i', strtotime($order['created_at'])) . '</td></tr>
                 <tr><td><strong>Status:</strong></td><td><span class="order-status status-' . $order['status'] . '">' . ucfirst($order['status']) . '</span></td></tr>
                 <tr><td><strong>Payment Method:</strong></td><td>' . ucfirst($order['payment_method'] ?? 'N/A') . '</td></tr>
+                ' . ($order['payment_method'] === 'card' && $order['card_type'] ? '
+                <tr><td><strong>Card Type:</strong></td><td>' . ucfirst($order['card_type']) . '</td></tr>
+                <tr><td><strong>Card Number:</strong></td><td>**** **** **** ' . ($order['card_number'] ? substr($order['card_number'], -4) : '****') . '</td></tr>
+                <tr><td><strong>Card Expiry:</strong></td><td>' . ($order['card_expiry'] ?? 'N/A') . '</td></tr>
+                <tr><td><strong>Cardholder:</strong></td><td>' . htmlspecialchars($order['card_holder'] ?? 'N/A') . '</td></tr>
+                ' : '') . '
             </table>
         </div>
         <div class="col-md-6">
@@ -85,12 +91,12 @@ try {
             </thead>
             <tbody>';
 
-      $subtotal = 0;
-      foreach ($items as $item) {
-            $item_total = $item['quantity'] * $item['price'];
-            $subtotal += $item_total;
+    $subtotal = 0;
+    foreach ($items as $item) {
+        $item_total = $item['quantity'] * $item['price'];
+        $subtotal += $item_total;
 
-            $html .= '
+        $html .= '
                 <tr>
                     <td>
                         <div class="d-flex align-items-center">
@@ -105,9 +111,9 @@ try {
                     <td>$' . number_format($item['price'], 2) . '</td>
                     <td>$' . number_format($item_total, 2) . '</td>
                 </tr>';
-      }
+    }
 
-      $html .= '
+    $html .= '
             </tbody>
             <tfoot>
                 <tr>
@@ -118,8 +124,8 @@ try {
         </table>
     </div>';
 
-      echo json_encode(['html' => $html]);
+    echo json_encode(['html' => $html]);
 } catch (Exception $e) {
-      http_response_code(500);
-      echo json_encode(['error' => 'Server error']);
+    http_response_code(500);
+    echo json_encode(['error' => 'Server error']);
 }
