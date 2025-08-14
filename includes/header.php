@@ -1,10 +1,21 @@
+<?php
+include 'functions.php';
+include 'language.php';
+
+$arr_language = [
+      'en' => 'English',
+      'cn' => 'Chinese',
+      'kh' => 'Khmer',
+      'vn' => 'Vietnamese',
+];
+?>
 <!-- Cart Overlay -->
 <div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
 <!-- Cart Sidebar -->
 <div class="cart-sidebar" id="cartSidebar">
       <div class="cart-header">
             <h5 class="mb-0">
-                  <i class="fas fa-shopping-cart me-2"></i>Shopping Cart
+                  <i class="fas fa-shopping-cart me-2"></i><?php echo __('shopping_cart'); ?>
             </h5>
             <button type="button" class="btn-close" onclick="closeCart()"></button>
       </div>
@@ -12,69 +23,58 @@
       <div class="cart-items" id="cartItemsContainer">
             <div class="text-center mt-4 justify-content-center align-items-center d-flex flex-column w-100">
                   <img src="images/placeholder-cart.png" alt="Empty Cart" style="width:120px;opacity:0.5;" class="mb-2">
-                  <div class="text-muted">Cart is empty</div>
+                  <div class="text-muted"><?php echo __('cart_empty'); ?></div>
             </div>
       </div>
 
       <div class="cart-footer">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                  <h5 class="mb-0">Total:</h5>
+                  <h5 class="mb-0"><?php echo __('total'); ?>:</h5>
                   <h4 class="mb-0 text-primary" id="cartTotal">$0.00</h4>
             </div>
 
             <button class="btn btn-success btn-lg w-100 mb-3" onclick="showPaymentModal()" id="checkoutBtn" style="display: none;">
-                  <i class="fas fa-credit-card me-2"></i>Checkout
+                  <i class="fas fa-credit-card me-2"></i><?php echo __('checkout'); ?>
             </button>
             <button class="btn btn-outline-secondary w-100" onclick="clearGuestCart()" id="clearCartBtn" style="display: none;">
-                  <i class="fas fa-trash me-2"></i>Clear Cart
+                  <i class="fas fa-trash me-2"></i><?php echo __('clear_cart'); ?>
             </button>
       </div>
 </div>
 
-<?php
-// Function to check if current page matches the nav link
-function isActivePage($page_name)
-{
-      $current_page = basename($_SERVER['PHP_SELF']);
-      $current_url = $_SERVER['REQUEST_URI'];
-      $query_string = $_SERVER['QUERY_STRING'] ?? '';
-
-      // Special cases for different pages
-      switch ($page_name) {
-            case 'home':
-                  // Check if we're on index.php without query parameters (except for anchor links)
-                  return $current_page === 'index.php' && empty($query_string);
-            case 'products':
-                  // Check if we're on product-list.php or any product-related page
-                  return $current_page === 'product-list.php' ||
-                        strpos($current_url, 'product-list.php') !== false ||
-                        strpos($current_url, 'products') !== false;
-            case 'features':
-                  // Check for features section anchor
-                  return strpos($current_url, '#features') !== false;
-            case 'about':
-                  // Check for about section anchor
-                  return strpos($current_url, '#about') !== false;
-            case 'contact':
-                  // Check for contact section anchor
-                  return strpos($current_url, '#contact') !== false;
-            default:
-                  return false;
-      }
-}
-
-// Function to get current page info for debugging (optional)
-function getCurrentPageInfo()
-{
-      return [
-            'script_name' => $_SERVER['SCRIPT_NAME'] ?? '',
-            'php_self' => $_SERVER['PHP_SELF'] ?? '',
-            'request_uri' => $_SERVER['REQUEST_URI'] ?? '',
-            'query_string' => $_SERVER['QUERY_STRING'] ?? '',
-            'basename' => basename($_SERVER['PHP_SELF'])
-      ];
-}
-?>
+<!-- top header -->
+<div class="top-header">
+      <div class="container">
+            <div class="row">
+                  <div class="col-md-6">
+                        <a href="https://www.facebook.com/profile.php?id=100063507000000" target="_blank" class="text-white">
+                              <i class="fab fa-facebook-f me-2"></i>Facebook
+                        </a>
+                        <a href="https://www.instagram.com/ch_fashion_store/" target="_blank" class="text-white">
+                              <i class="fab fa-instagram me-2"></i>Instagram
+                        </a>
+                        <a href="https://t.me/ch_fashion_store" target="_blank" class="text-white">
+                              <i class="fab fa-telegram me-2"></i>Telegram
+                        </a>
+                        <a href="https://wa.me/85512345678" target="_blank" class="text-white">
+                              <i class="fab fa-whatsapp me-2"></i>WhatsApp
+                        </a>
+                        <a href="tel:+85512345678" target="_blank" class="text-white">
+                              <i class="fas fa-phone me-2"></i>Phone
+                        </a>
+                  </div>
+                  <div class="col-md-6 d-flex justify-content-end align-items-center">
+                        <div class="language-selector">
+                              <?php foreach ($arr_language as $key => $value): ?>
+                                    <a href="?lang=<?php echo $key; ?>" class="language-link <?php echo $current_language === $key ? 'active' : ''; ?>">
+                                          <img src="../images/flags/<?php echo $key; ?>.png" alt="<?php echo $value; ?>" class="language-flag">
+                                    </a>
+                              <?php endforeach; ?>
+                        </div>
+                  </div>
+            </div>
+      </div>
+</div>
 
 <!-- Navigation -->
 <nav class="navbar navbar-expand-lg navbar-light fixed-top">
@@ -90,36 +90,36 @@ function getCurrentPageInfo()
             <div class="collapse navbar-collapse" id="navbarNav">
                   <ul class="navbar-nav ms-auto">
                         <li class="nav-item">
-                              <a class="nav-link <?php echo isActivePage('home') ? 'active' : ''; ?>" href="/">Home</a>
+                              <a class="nav-link <?php echo isActivePage('home') ? 'active' : ''; ?>" href="/"><?php echo __('home'); ?></a>
                         </li>
                         <li class="nav-item">
-                              <a class="nav-link <?php echo isActivePage('features') ? 'active' : ''; ?>" href="#features">Features</a>
+                              <a class="nav-link <?php echo isActivePage('features') ? 'active' : ''; ?>" href="#features"><?php echo __('features'); ?></a>
                         </li>
                         <li class="nav-item dropdown">
                               <a class="nav-link dropdown-toggle <?php echo isActivePage('products') ? 'active' : ''; ?>" href="#" role="button" data-bs-toggle="dropdown">
-                                    Products
+                                    <?php echo __('products'); ?>
                               </a>
                               <ul class="dropdown-menu">
                                     <li><a class="dropdown-item" href="#products" onclick="filterByCategory('All Products')">
-                                                <i class="fas fa-th-large me-2"></i>All Products
+                                                <i class="fas fa-th-large me-2"></i><?php echo __('all_products'); ?>
                                           </a></li>
                                     <li>
                                           <hr class="dropdown-divider">
                                     </li>
                                     <li><a class="dropdown-item" href="product-list.php?category=Food">
-                                                <i class="fas fa-utensils me-2"></i>Food
+                                                <i class="fas fa-utensils me-2"></i><?php echo __('food'); ?>
                                           </a></li>
                                     <li class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="product-list.php?category=Clothes">
-                                                <i class="fas fa-tshirt me-2"></i>All Clothing
+                                                <i class="fas fa-tshirt me-2"></i><?php echo __('all_clothing'); ?>
                                           </a></li>
                               </ul>
                         </li>
                         <li class="nav-item">
-                              <a class="nav-link <?php echo isActivePage('about') ? 'active' : ''; ?>" href="#about">About</a>
+                              <a class="nav-link <?php echo isActivePage('about') ? 'active' : ''; ?>" href="#about"><?php echo __('about'); ?></a>
                         </li>
                         <li class="nav-item">
-                              <a class="nav-link <?php echo isActivePage('contact') ? 'active' : ''; ?>" href="#contact">Contact</a>
+                              <a class="nav-link <?php echo isActivePage('contact') ? 'active' : ''; ?>" href="#contact"><?php echo __('contact'); ?></a>
                         </li>
                         <li class="nav-item position-relative">
                               <a class="nav-link" href="#" onclick="openCart(); return false;">
@@ -131,51 +131,38 @@ function getCurrentPageInfo()
                               <li class="nav-item dropdown">
                                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                                           <i class="fas fa-user-circle me-2"></i><?php echo $_SESSION['username']; ?>
-                                          <span class="badge bg-success ms-1">Customer</span>
+                                          <span class="badge bg-success ms-1"><?php echo __('customer'); ?></span>
                                     </a>
                                     <ul class="dropdown-menu">
                                           <li><a class="dropdown-item" href="user/customer_dashboard.php">
-                                                      <i class="fas fa-tachometer-alt me-2"></i>My Dashboard
+                                                      <i class="fas fa-tachometer-alt me-2"></i><?php echo __('my_dashboard'); ?>
                                                 </a></li>
                                           <li><a class="dropdown-item" href="user/customer_profile.php">
-                                                      <i class="fas fa-user me-2"></i>Profile
+                                                      <i class="fas fa-user me-2"></i><?php echo __('profile'); ?>
                                                 </a></li>
                                           <li><a class="dropdown-item" href="user/customer_settings.php">
-                                                      <i class="fas fa-cog me-2"></i>Settings
+                                                      <i class="fas fa-cog me-2"></i><?php echo __('settings'); ?>
                                                 </a></li>
                                           <li>
                                                 <hr class="dropdown-divider">
                                           </li>
                                           <li><a class="dropdown-item" href="logout.php">
-                                                      <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                                      <i class="fas fa-sign-out-alt me-2"></i><?php echo __('logout'); ?>
                                                 </a></li>
                                     </ul>
                               </li>
                         <?php else: ?>
                               <li class="nav-item">
                                     <a class="nav-link btn btn-outline-primary btn-custom ms-2" href="login.php">
-                                          <i class="fas fa-sign-in-alt me-2"></i>Login
+                                          <i class="fas fa-sign-in-alt me-2"></i><?php echo __('login'); ?>
                                     </a>
                               </li>
                         <?php endif; ?>
                         <?php if (!isset($_SESSION['user_id'])): ?>
                               <li class="nav-item dropdown">
                                     <a class="nav-link btn btn-primary btn-custom ms-2" href="register.php">
-                                          <i class="fas fa-user-plus me-2"></i>Register
+                                          <i class="fas fa-user-plus me-2"></i><?php echo __('register'); ?>
                                     </a>
-                                    <!-- <a class="nav-link btn btn-primary btn-custom ms-2 dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                          <i class="fas fa-user-plus me-2"></i>Register
-                                    </a> -->
-                                    <!-- <ul class="dropdown-menu">
-                                          <li><a class="dropdown-item" href="customer_register.php">
-                                                      <i class="fas fa-user me-2"></i>Customer Account
-                                                </a></li>
-                                          <li>
-                                                <a class="dropdown-item" href="register.php">
-                                                      <i class="fas fa-user-tie me-2"></i>Staff Account
-                                                </a>
-                                          </li>
-                                    </ul> -->
                               </li>
                         <?php endif; ?>
                   </ul>

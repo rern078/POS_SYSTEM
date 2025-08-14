@@ -11,9 +11,220 @@
       --light-color: #f8f9fc;
 }
 
+/* Enhanced Top Header Animation Effects */
+.top-header {
+      background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+      color: white;
+      padding: 0.2rem 0;
+      font-size: 0.85rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      position: relative;
+      z-index: 999999;
+      position: fixed;
+      width: 100%;
+      top: 0;
+      left: 0;
+      right: 0;
+      transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+      transform: translateY(0);
+      opacity: 1;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+}
+
+/* Top Header Scroll Animation Classes */
+.top-header.scrolled {
+      transform: translateY(-100%);
+      opacity: 0;
+}
+
+.top-header.scroll-up {
+      transform: translateY(0);
+      opacity: 1;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      background: linear-gradient(135deg, rgba(44, 62, 80, 0.95) 0%, rgba(52, 73, 94, 0.95) 100%);
+}
+
+.top-header.scroll-down {
+      transform: translateY(-100%);
+      opacity: 0;
+}
+
+/* Smooth animation for all top header elements */
+.top-header * {
+      transition: all 0.3s ease-in-out;
+}
+
+/* Enhanced hover effects during scroll animation */
+.top-header.scroll-up a:hover {
+      transform: translateY(-2px) scale(1.05);
+}
+
+.top-header.scroll-up .language-link:hover {
+      transform: translateY(-3px) scale(1.1);
+}
+
+
+.top-header .row {
+      align-items: center;
+      margin: 0;
+}
+
+.top-header .col-md-6 {
+      padding: 0;
+}
+
+/* Social Media Links */
+.top-header a {
+      color: white !important;
+      text-decoration: none;
+      margin-right: 20px;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      font-weight: 500;
+}
+
+.top-header a:hover {
+      color: var(--primary-color);
+      transform: translateY(-1px);
+      text-decoration: none;
+}
+
+.top-header a:last-child {
+      margin-right: 0;
+}
+
+.top-header i {
+      font-size: 0.9rem;
+      margin-right: 5px;
+      transition: transform 0.3s ease;
+}
+
+.top-header a:hover i {
+      transform: scale(1.1);
+}
+
+/* Language Selector */
+.language-selector {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      justify-content: flex-end;
+}
+
+.language-link {
+      display: inline-block;
+      transition: all 0.3s ease;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-right: 5px !important;
+}
+
+.language-link:hover {
+      transform: translateY(-2px);
+}
+
+.language-flag {
+      width: 35px;
+      height: 30px;
+      object-fit: cover;
+      border-radius: 2px;
+      transition: transform 0.3s ease;
+}
+
+.language-link:hover .language-flag {
+      transform: scale(1.1);
+}
+
+/* Language Selector Styles */
+.language-selector {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+}
+
+.language-link {
+      display: inline-block;
+      padding: 5px;
+      border-radius: 5px;
+      transition: all 0.3s ease;
+      text-decoration: none;
+}
+
+.language-link:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      transform: scale(1.1);
+}
+
+.language-link.active {
+      background-color: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.language-flag {
+      width: 24px;
+      height: 16px;
+      border-radius: 2px;
+      object-fit: cover;
+}
+
+/* Responsive language selector */
+@media (max-width: 768px) {
+      .language-selector {
+            gap: 5px;
+      }
+
+      .language-flag {
+            width: 20px;
+            height: 14px;
+      }
+}
+
+/* Responsive Design for Top Header */
+@media (max-width: 768px) {
+      .top-header {
+            display: none;
+      }
+}
+
+/* Social Media Specific Hover Effects */
+.top-header a[href*="facebook"]:hover {
+      color: #1877f2 !important;
+}
+
+.top-header a[href*="instagram"]:hover {
+      color: #e4405f !important;
+}
+
+.top-header a[href*="telegram"]:hover {
+      color: #0088cc !important;
+}
+
+.top-header a[href*="whatsapp"]:hover {
+      color: #25d366 !important;
+}
+
+.top-header a[href*="tel"]:hover {
+      color: #28a745 !important;
+}
+
+/* Import Google Fonts for Khmer support */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Battambang:wght@300;400;500;600;700&display=swap');
+
 body {
-      font-family: 'Inter', sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       line-height: 1.6;
+      padding-top: 40px;
+      /* Account for fixed top header */
+}
+
+/* Khmer Font Support */
+
+[lang="km"],
+[lang="kh"] {
+      font-family: 'Noto Sans Khmer', 'Khmer OS', 'Khmer OS System', 'Khmer OS Content', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 /* Hero Section */
