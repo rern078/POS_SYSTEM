@@ -15,7 +15,8 @@
 .top-header {
       background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
       color: white;
-      padding: 0.2rem 0;
+      padding: 0.4rem;
+      height: 40px;
       font-size: 0.85rem;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       position: relative;
@@ -216,8 +217,7 @@
 body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       line-height: 1.6;
-      padding-top: 40px;
-      /* Account for fixed top header */
+      /* padding-top: 40px; */
 }
 
 /* Khmer Font Support */
@@ -336,6 +336,7 @@ body {
       box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
       position: relative;
       z-index: 1000;
+      margin-top: 40px;
 }
 
 .navbar::before {
@@ -629,7 +630,7 @@ body {
       padding-bottom: 0.5rem;
       display: flex;
       flex-direction: column;
-      min-height: 440px;
+      min-height: 480px;
 }
 
 .product-card:hover {

@@ -134,14 +134,8 @@ $arr_language = [
                                           <span class="badge bg-success ms-1"><?php echo __('customer'); ?></span>
                                     </a>
                                     <ul class="dropdown-menu">
-                                          <li><a class="dropdown-item" href="user/customer_dashboard.php">
+                                          <li><a class="dropdown-item" href="user_dashboard.php">
                                                       <i class="fas fa-tachometer-alt me-2"></i><?php echo __('my_dashboard'); ?>
-                                                </a></li>
-                                          <li><a class="dropdown-item" href="user/customer_profile.php">
-                                                      <i class="fas fa-user me-2"></i><?php echo __('profile'); ?>
-                                                </a></li>
-                                          <li><a class="dropdown-item" href="user/customer_settings.php">
-                                                      <i class="fas fa-cog me-2"></i><?php echo __('settings'); ?>
                                                 </a></li>
                                           <li>
                                                 <hr class="dropdown-divider">
