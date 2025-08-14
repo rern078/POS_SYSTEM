@@ -268,6 +268,46 @@ $arr_language = [
                                                       <option value="bank">Bank Transfer</option>
                                                 </select>
                                           </div>
+
+                                          <!-- Card Payment Fields -->
+                                          <div id="card-payment-fields" style="display: none;">
+                                                <div class="mb-3">
+                                                      <label for="card_type" class="form-label">Card Type *</label>
+                                                      <select class="form-select" id="card_type" name="card_type" required>
+                                                            <option value="">Select card type</option>
+                                                            <option value="visa">Visa</option>
+                                                            <option value="mastercard">Mastercard</option>
+                                                            <option value="amex">American Express</option>
+                                                            <option value="discover">Discover</option>
+                                                      </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                      <label for="card_number" class="form-label">Card Number *</label>
+                                                      <input type="text" class="form-control" id="card_number" name="card_number"
+                                                            placeholder="1234 5678 9012 3456" maxlength="19" required>
+                                                </div>
+                                                <div class="row">
+                                                      <div class="col-md-6">
+                                                            <div class="mb-3">
+                                                                  <label for="card_expiry" class="form-label">Expiry Date *</label>
+                                                                  <input type="text" class="form-control" id="card_expiry" name="card_expiry"
+                                                                        placeholder="MM/YY" maxlength="5" required>
+                                                            </div>
+                                                      </div>
+                                                      <div class="col-md-6">
+                                                            <div class="mb-3">
+                                                                  <label for="card_cvv" class="form-label">CVV *</label>
+                                                                  <input type="text" class="form-control" id="card_cvv" name="card_cvv"
+                                                                        placeholder="123" maxlength="4" required>
+                                                            </div>
+                                                      </div>
+                                                </div>
+                                                <div class="mb-3">
+                                                      <label for="card_holder" class="form-label">Cardholder Name *</label>
+                                                      <input type="text" class="form-control" id="card_holder" name="card_holder"
+                                                            placeholder="JOHN DOE" required>
+                                                </div>
+                                          </div>
                                     </div>
                                     <div class="col-md-6">
                                           <div class="payment-summary">
@@ -337,9 +377,9 @@ $arr_language = [
                                           </div>
                                     </div>
                               </div>
-                              <div class="alert alert-warning">
+                              <div class="alert alert-warning" id="payment-info-alert">
                                     <i class="fas fa-info-circle me-2"></i>
-                                    <small>Please note: This is a demo payment system. No actual payment will be processed.</small>
+                                    <small id="payment-info-text">Please note: This is a demo payment system. No actual payment will be processed.</small>
                               </div>
                         </div>
                         <div class="modal-footer">

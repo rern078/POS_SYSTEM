@@ -20,7 +20,7 @@
       font-size: 0.85rem;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       position: relative;
-      z-index: 999999;
+      z-index: 1049;
       position: fixed;
       width: 100%;
       top: 0;
@@ -127,11 +127,13 @@
 }
 
 .language-flag {
-      width: 35px;
-      height: 30px;
       object-fit: cover;
       border-radius: 2px;
       transition: transform 0.3s ease;
+      width: 30px;
+      height: 18px;
+      border-radius: 2px;
+      object-fit: cover;
 }
 
 .language-link:hover .language-flag {
@@ -139,11 +141,6 @@
 }
 
 /* Language Selector Styles */
-.language-selector {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-}
 
 .language-link {
       display: inline-block;
@@ -163,12 +160,6 @@
       box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
 }
 
-.language-flag {
-      width: 24px;
-      height: 16px;
-      border-radius: 2px;
-      object-fit: cover;
-}
 
 /* Responsive language selector */
 @media (max-width: 768px) {
@@ -579,6 +570,7 @@ body {
       background: linear-gradient(90deg, var(--primary-color), var(--info-color));
       border-radius: 2px;
       animation: activeLinkGlow 2s ease-in-out infinite;
+      margin-left: unset;
 }
 
 @keyframes activeLinkGlow {

@@ -83,32 +83,45 @@
 <script>
       let currentOrderId = null;
 
+
+
       // Cart Functions
       function openCart() {
             console.log('Opening cart...'); // Debug log
 
-            const cartSidebar = document.getElementById('cartSidebar');
-            const cartOverlay = document.getElementById('cartOverlay');
+            try {
+                  const cartSidebar = document.getElementById('cartSidebar');
+                  const cartOverlay = document.getElementById('cartOverlay');
 
-            if (!cartSidebar || !cartOverlay) {
-                  console.error('Cart elements not found');
-                  return;
+                  console.log('Cart sidebar element:', cartSidebar); // Debug log
+                  console.log('Cart overlay element:', cartOverlay); // Debug log
+
+                  if (!cartSidebar || !cartOverlay) {
+                        console.error('Cart elements not found');
+                        showNotification('Error: Cart elements not found', 'error');
+                        return;
+                  }
+
+                  cartSidebar.classList.add('open');
+                  cartOverlay.classList.add('show');
+
+                  console.log('Cart opened successfully'); // Debug log
+
+                  // Ensure buttons are properly initialized
+                  const checkoutBtn = document.getElementById('checkoutBtn');
+                  const clearCartBtn = document.getElementById('clearCartBtn');
+
+                  if (checkoutBtn) {
+                        checkoutBtn.disabled = false;
+                        checkoutBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Checkout';
+                  }
+
+                  // Fetch cart data
+                  fetchGuestCart();
+            } catch (error) {
+                  console.error('Error in openCart function:', error);
+                  showNotification('Error opening cart: ' + error.message, 'error');
             }
-
-            cartSidebar.classList.add('open');
-            cartOverlay.classList.add('show');
-
-            // Ensure buttons are properly initialized
-            const checkoutBtn = document.getElementById('checkoutBtn');
-            const clearCartBtn = document.getElementById('clearCartBtn');
-
-            if (checkoutBtn) {
-                  checkoutBtn.disabled = false;
-                  checkoutBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Checkout';
-            }
-
-            // Fetch cart data
-            fetchGuestCart();
       }
 
       function closeCart() {
@@ -466,26 +479,51 @@
 
       function toggleGuestCashFields() {
             const paymentMethod = document.getElementById('payment_method').value;
+            console.log('Payment method selected:', paymentMethod); // Debug log
             const cashFields = document.getElementById('guest-cash-fields');
             const quickAmounts = document.getElementById('guest-quick-amounts');
+            const cardFields = document.getElementById('card-payment-fields');
             const amountTendered = document.getElementById('guest_amount_tendered');
             const changeAmount = document.getElementById('guest_change_amount');
             const insufficientAmount = document.getElementById('guest-insufficient-amount');
+            const paymentInfoAlert = document.getElementById('payment-info-alert');
+            const paymentInfoText = document.getElementById('payment-info-text');
 
-            if (paymentMethod === 'cash') {
-                  cashFields.style.display = 'block';
-                  quickAmounts.style.display = 'block';
-                  amountTendered.setAttribute('required', 'required');
-                  changeAmount.setAttribute('readonly', 'readonly');
-                  changeAmount.value = '';
-                  insufficientAmount.style.display = 'none';
-            } else {
-                  cashFields.style.display = 'none';
-                  quickAmounts.style.display = 'none';
-                  amountTendered.removeAttribute('required');
-                  changeAmount.setAttribute('readonly', 'readonly');
-                  changeAmount.value = '';
-                  insufficientAmount.style.display = 'none';
+            // Hide all payment-specific fields first
+            cashFields.style.display = 'none';
+            quickAmounts.style.display = 'none';
+            cardFields.style.display = 'none';
+            amountTendered.removeAttribute('required');
+            changeAmount.setAttribute('readonly', 'readonly');
+            changeAmount.value = '';
+            insufficientAmount.style.display = 'none';
+
+            // Handle different payment methods
+            switch (paymentMethod) {
+                  case 'cash':
+                        cashFields.style.display = 'block';
+                        quickAmounts.style.display = 'block';
+                        amountTendered.setAttribute('required', 'required');
+                        paymentInfoAlert.className = 'alert alert-info';
+                        paymentInfoText.innerHTML = '<i class="fas fa-money-bill-wave me-2"></i>Please enter the amount tendered and we will calculate your change.';
+                        break;
+                  case 'card':
+                        cardFields.style.display = 'block';
+                        paymentInfoAlert.className = 'alert alert-success';
+                        paymentInfoText.innerHTML = '<i class="fas fa-credit-card me-2"></i>Please enter your card details securely. Your payment will be processed safely.';
+                        break;
+                  case 'mobile':
+                        paymentInfoAlert.className = 'alert alert-primary';
+                        paymentInfoText.innerHTML = '<i class="fas fa-mobile-alt me-2"></i>Mobile payment will be processed through your mobile payment app.';
+                        break;
+                  case 'bank':
+                        paymentInfoAlert.className = 'alert alert-warning';
+                        paymentInfoText.innerHTML = '<i class="fas fa-university me-2"></i>Bank transfer details will be provided after order completion.';
+                        break;
+                  default:
+                        paymentInfoAlert.className = 'alert alert-warning';
+                        paymentInfoText.innerHTML = '<i class="fas fa-info-circle me-2"></i>Please note: This is a demo payment system. No actual payment will be processed.';
+                        break;
             }
       }
 
@@ -675,6 +713,14 @@
       document.getElementById('paymentForm').addEventListener('submit', function(e) {
             e.preventDefault();
 
+            const paymentMethod = document.getElementById('payment_method').value;
+            if (!paymentMethod) {
+                  showNotification('Please select a payment method', 'error');
+                  return;
+            }
+
+            console.log('Submitting payment with method:', paymentMethod); // Debug log
+
             const formData = new FormData(this);
             formData.append('action', 'process_guest_payment');
 
@@ -699,6 +745,7 @@
                         }
                   })
                   .catch(error => {
+                        console.error('Payment processing error:', error);
                         showNotification('Error processing payment', 'error');
                   });
       });
@@ -707,40 +754,111 @@
       document.addEventListener('DOMContentLoaded', function() {
             updateCartBadge();
 
-            // Check if we need to restore cart from sessionStorage
-            if (window.location.search.includes('restore_cart=1')) {
-                  const pendingCart = sessionStorage.getItem('pendingCart');
-                  if (pendingCart) {
-                        try {
-                              const cartData = JSON.parse(pendingCart);
-                              // Clear the stored cart data
-                              sessionStorage.removeItem('pendingCart');
-
-                              // Show notification
-                              showNotification('Welcome back! Your cart has been restored.', 'success');
-
-                              // Refresh cart display
-                              fetchGuestCart();
-                        } catch (e) {
-                              console.error('Error restoring cart:', e);
+            // Initialize payment modal
+            const paymentModal = document.getElementById('paymentModal');
+            if (paymentModal) {
+                  paymentModal.addEventListener('show.bs.modal', function() {
+                        // Reset payment method and show default message
+                        const paymentMethod = document.getElementById('payment_method');
+                        if (paymentMethod) {
+                              paymentMethod.value = '';
+                              toggleGuestCashFields();
                         }
+                  });
+            }
+
+            // Initialize card input formatting
+            initializeCardInputs();
+      });
+
+      // Card input formatting functions
+      function initializeCardInputs() {
+            const cardNumber = document.getElementById('card_number');
+            const cardExpiry = document.getElementById('card_expiry');
+            const cardCvv = document.getElementById('card_cvv');
+            const cardHolder = document.getElementById('card_holder');
+
+            if (cardNumber) {
+                  cardNumber.addEventListener('input', formatCardNumber);
+                  cardNumber.addEventListener('keypress', function(e) {
+                        if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete') {
+                              e.preventDefault();
+                        }
+                  });
+            }
+
+            if (cardExpiry) {
+                  cardExpiry.addEventListener('input', formatExpiryDate);
+                  cardExpiry.addEventListener('keypress', function(e) {
+                        if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== '/') {
+                              e.preventDefault();
+                        }
+                  });
+            }
+
+            if (cardCvv) {
+                  cardCvv.addEventListener('keypress', function(e) {
+                        if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete') {
+                              e.preventDefault();
+                        }
+                  });
+            }
+
+            if (cardHolder) {
+                  cardHolder.addEventListener('input', function(e) {
+                        e.target.value = e.target.value.toUpperCase();
+                  });
+            }
+      }
+
+      function formatCardNumber(e) {
+            let value = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+            let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
+            e.target.value = formattedValue;
+      }
+
+      function formatExpiryDate(e) {
+            let value = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+            if (value.length >= 2) {
+                  value = value.substring(0, 2) + '/' + value.substring(2, 4);
+            }
+            e.target.value = value;
+      }
+
+      // Check if we need to restore cart from sessionStorage
+      if (window.location.search.includes('restore_cart=1')) {
+            const pendingCart = sessionStorage.getItem('pendingCart');
+            if (pendingCart) {
+                  try {
+                        const cartData = JSON.parse(pendingCart);
+                        // Clear the stored cart data
+                        sessionStorage.removeItem('pendingCart');
+
+                        // Show notification
+                        showNotification('Welcome back! Your cart has been restored.', 'success');
+
+                        // Refresh cart display
+                        fetchGuestCart();
+                  } catch (e) {
+                        console.error('Error restoring cart:', e);
                   }
             }
+      }
 
-            // Show welcome message for newly registered customers
-            if (window.location.search.includes('registered=1')) {
-                  showNotification('Registration successful! Welcome to our store.', 'success');
-                  // Clean up URL
-                  window.history.replaceState({}, document.title, window.location.pathname);
-            }
+      // Show welcome message for newly registered customers
+      if (window.location.search.includes('registered=1')) {
+            showNotification('Registration successful! Welcome to our store.', 'success');
+            // Clean up URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+      }
 
-            // Show welcome message for logged in customers
-            if (window.location.search.includes('logged_in=1')) {
-                  showNotification('Welcome back! You are now logged in.', 'success');
-                  // Clean up URL
-                  window.history.replaceState({}, document.title, window.location.pathname);
-            }
-      });
+      // Show welcome message for logged in customers
+      if (window.location.search.includes('logged_in=1')) {
+            showNotification('Welcome back! You are now logged in.', 'success');
+            // Clean up URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+      }
+      // });
 
       // Smooth scrolling for anchor links
       document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -1089,4 +1207,29 @@
                   }
             }
       }
+
+      // Make functions globally available after all functions are defined
+      window.openCart = openCart;
+      window.showQuantityOverlay = showQuantityOverlay;
+      window.hideQuantityOverlay = hideQuantityOverlay;
+      window.updateProductQuantity = updateProductQuantity;
+      window.addToGuestCart = addToGuestCart;
+      window.addToGuestCartWithQuantity = addToGuestCartWithQuantity;
+      window.closeCart = closeCart;
+      window.clearGuestCart = clearGuestCart;
+      window.showPaymentModal = showPaymentModal;
+      window.toggleGuestCashFields = toggleGuestCashFields;
+      window.setGuestQuickAmount = setGuestQuickAmount;
+      window.calculateGuestChange = calculateGuestChange;
+      window.showNotification = showNotification;
+      window.printReceipt = printReceipt;
+      window.showCustomerLogin = showCustomerLogin;
+      window.showCustomerRegister = showCustomerRegister;
+      window.showProductDetailModal = showProductDetailModal;
+      window.updateModalQuantity = updateModalQuantity;
+      window.addToCartFromModal = addToCartFromModal;
+      window.filterByCategory = filterByCategory;
+      window.updateGuestQuantity = updateGuestQuantity;
+      window.removeFromGuestCart = removeFromGuestCart;
+      window.updateGuestQuantityDirect = updateGuestQuantityDirect;
 </script>
